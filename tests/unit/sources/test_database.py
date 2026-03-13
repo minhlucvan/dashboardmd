@@ -65,7 +65,17 @@ class TestSQLiteSource:
         """Should attach a SQLite file and make its tables queryable."""
         import sqlite3
 
+        import duckdb as _duckdb
+
         from dashboardmd.sources.database import SQLiteSource
+
+        # Skip if sqlite extension can't be loaded (e.g., no network)
+        try:
+            test_conn = _duckdb.connect()
+            test_conn.execute("INSTALL sqlite; LOAD sqlite;")
+            test_conn.close()
+        except _duckdb.IOException:
+            pytest.skip("DuckDB sqlite_scanner extension not available")
 
         # Create a SQLite DB from CSV data
         db_path = tmp_path / "test.sqlite"
