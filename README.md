@@ -19,19 +19,25 @@ Every BI platform — Metabase, Looker, PowerBI, Cube — uses the same foundati
 dashboardmd mirrors these concepts exactly in Python. The result is a data model that agents can
 build programmatically, that maps 1:1 to existing BI platforms, and that renders to Markdown.
 
+It speaks SQL-like query semantics and connects to the data sources you already use:
+**PostgreSQL**, **MySQL**, **MongoDB**, **DuckDB**, **CSV**, and **MindsDB**.
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                                                             │
-│   Metabase  ◄──────┐                                       │
-│   Looker    ◄──────┤   dashboardmd                         │
-│   PowerBI   ◄──────┤   (same concepts, Python API)         │
-│   Cube      ◄──────┘                                       │
-│                         │                                   │
-│                         ▼                                   │
-│                    Markdown report                          │
-│                    (.md + assets/)                          │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│   Data Sources                  BI Platforms                    │
+│   ────────────                  ────────────                    │
+│   PostgreSQL  ──────┐           Metabase  ◄──────┐             │
+│   MySQL       ──────┤           Looker    ◄──────┤             │
+│   MongoDB     ──────┤           PowerBI   ◄──────┤             │
+│   DuckDB      ──────┼───►  dashboardmd   ◄──────┘             │
+│   CSV         ──────┤     (SQL-like query, Python API)         │
+│   MindsDB     ──────┘           │                              │
+│                                 ▼                              │
+│                            Markdown report                     │
+│                            (.md + assets/)                     │
+│                                                                │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Installation
