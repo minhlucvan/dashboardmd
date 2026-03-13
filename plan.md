@@ -1,26 +1,87 @@
-# Connector Plugin API — Full-Stack Data Connectors
+# Connector Plugin API — Full-Stack, Composable Data Connectors
 
 ## Vision
 
-A **Connector** is a full-stack plugin that bundles everything needed to analyze a data domain:
-data fetching, cleaning, semantic model (entities/dimensions/measures/relationships),
-and pre-built dashboard widgets. Think Grafana data source plugins with pre-built dashboards.
+A **Connector** is a full-stack plugin that bundles everything needed to analyze a data domain.
+But the real power is **composability** — connectors are designed to be mixed freely.
+Install GitHub + Jira + custom connectors, they all register into the same Analyst,
+and you query across them as if they were one system.
 
 ```python
-# End-user experience
+# The composability story: multiple connectors → one unified analyst
+from dashboardmd import Analyst, Dashboard
 from dashboardmd_github import GitHubConnector
-
-gh = GitHubConnector(token="ghp_...", repo="org/repo")
+from dashboardmd_jira import JiraConnector
 
 analyst = Analyst()
-analyst.use(gh)                    # registers all tables, entities, relationships
 
-# Use pre-built dashboard
-dash = gh.dashboard("PR Review")   # complete dashboard, ready to save
+# Install multiple connectors — they all share the same DuckDB
+analyst.use(GitHubConnector(token="ghp_...", repo="org/repo"))
+analyst.use(JiraConnector(url="https://org.atlassian.net", project="PROJ"))
+
+# Cross-connector relationships — link Jira tickets to GitHub PRs
+analyst.add_relationship(Relationship(
+    "jira_issues", "pull_requests",
+    on=("key", "jira_key"),  # PR branch names contain Jira keys
+    type="one_to_many",
+))
+
+# Query across connectors as if they're one system
+analyst.query(
+    measures=["pull_requests.avg_merge_time"],
+    dimensions=["jira_issues.priority"],
+)
+
+# Build a unified dashboard mixing widgets from different connectors
+dash = Dashboard(title="Engineering Velocity", analyst=analyst, output="velocity.md")
+gh.contribute_widgets(dash, ["PR Review"])        # GitHub's PR widget
+jira.contribute_widgets(dash, ["Sprint Board"])   # Jira's sprint widget
+dash.section("Cross-Platform")                    # Custom cross-connector section
+dash.tile_sql("PRs by Jira Priority", """
+    SELECT j.priority, COUNT(*) as pr_count, AVG(p.merge_hours) as avg_merge
+    FROM pull_requests p JOIN jira_issues j ON p.jira_key = j.key
+    GROUP BY 1 ORDER BY 2 DESC
+""")
 dash.save()
+```
 
-# Or cherry-pick entities for custom analysis
-analyst.query(measures=["pull_requests.avg_merge_time"], dimensions=["pull_requests.author"])
+## Core Principles
+
+### 1. Connectors are additive, not exclusive
+
+Multiple `analyst.use()` calls stack — each connector adds its tables, entities,
+and relationships into the shared DuckDB. No connector "owns" the analyst.
+
+### 2. Cross-connector joins are first-class
+
+Users can define relationships between entities from different connectors.
+The semantic query engine resolves joins across connector boundaries transparently.
+
+### 3. Widgets are portable
+
+A connector's widgets work on any Dashboard that has the required entities registered.
+Widgets from GitHub, Jira, and custom connectors can coexist in one dashboard.
+
+### 4. Mix core, community, and custom
+
+```python
+analyst = Analyst()
+
+# Community connector (pip install dashboardmd-github)
+analyst.use(GitHubConnector(token="...", repo="org/repo"))
+
+# Core built-in connector
+analyst.use(APIConnector("crm", endpoints={"deals": "https://api.crm.com/deals"}))
+
+# Custom inline connector
+analyst.use(CustomConnector(
+    name="team",
+    data={"members": load_team_csv()},
+    entities=[Entity("members", dimensions=[...], measures=[...])],
+))
+
+# All three are now queryable together
+analyst.sql("SELECT * FROM pull_requests p JOIN members m ON p.author = m.github_handle")
 ```
 
 ## Architecture
@@ -49,22 +110,32 @@ from dashboardmd.sources.base import SourceHandler
 
 @dataclass
 class DashboardWidget:
-    """A pre-built dashboard section contributed by a connector."""
+    """A pre-built dashboard section contributed by a connector.
+
+    Widgets are portable — they work on any Dashboard that has the
+    required entities registered, regardless of which connector
+    registered them.
+    """
 
     name: str
     title: str
     description: str = ""
+    requires: list[str] = field(default_factory=list)  # entity names this widget needs
     build: Callable[[Dashboard], None] = lambda d: None
 
 
 class Connector(ABC):
     """Full-stack data connector: source + model + dashboards.
 
+    Connectors are designed to be composed freely. Multiple connectors
+    can be installed into the same Analyst, and their entities can be
+    joined together via cross-connector relationships.
+
     Subclass this to create a complete analytics package for a data domain.
     A connector provides:
     1. Data sources (tables registered in DuckDB)
     2. Entities with dimensions and measures (semantic model)
-    3. Relationships between entities
+    3. Relationships between entities (within this connector)
     4. Pre-built dashboard widgets
     """
 
@@ -89,16 +160,24 @@ class Connector(ABC):
     def entities(self) -> list[Entity]:
         """Return pre-defined entities with dimensions and measures.
 
-        Each entity's source should match a key from sources().
+        Each entity's name should match a key from sources().
         """
         ...
 
     def relationships(self) -> list[Relationship]:
-        """Return relationships between entities. Override to customize."""
+        """Return relationships between this connector's entities.
+
+        For cross-connector relationships, users add them directly
+        via analyst.add_relationship() after installing both connectors.
+        """
         return []
 
     def widgets(self) -> list[DashboardWidget]:
-        """Return pre-built dashboard widgets. Override to customize."""
+        """Return pre-built dashboard widgets.
+
+        Widgets should declare their required entities in `requires`
+        so the system can validate they're available before building.
+        """
         return []
 
     # ------------------------------------------------------------------
@@ -108,7 +187,9 @@ class Connector(ABC):
     def register(self, analyst: Analyst) -> None:
         """Register all sources, entities, and relationships into an Analyst.
 
-        This is called by analyst.use(connector). Override for custom setup.
+        Called by analyst.use(connector). Multiple connectors can register
+        into the same analyst — they all share the same DuckDB instance.
+        Override for custom setup logic.
         """
         # 1. Register data sources
         for table_name, source in self.sources().items():
@@ -116,25 +197,42 @@ class Connector(ABC):
 
         # 2. Register entities (sources already loaded, so set source=None)
         for entity in self.entities():
-            # Entity source is already registered above, just add the semantic layer
             entity_copy = Entity(
                 name=entity.name,
-                source=None,  # already registered
+                source=None,  # already registered via sources()
                 dimensions=entity.dimensions,
                 measures=entity.measures,
             )
             analyst._entities[entity.name] = entity_copy
             analyst._query_builder = None
 
-        # 3. Register relationships
+        # 3. Register relationships (additive — extends existing)
         rels = self.relationships()
         if rels:
             analyst._relationships.extend(rels)
             analyst._query_builder = None
 
     # ------------------------------------------------------------------
-    # Dashboard factory
+    # Dashboard contribution
     # ------------------------------------------------------------------
+
+    def contribute_widgets(
+        self,
+        dashboard: Dashboard,
+        widget_names: list[str] | None = None,
+    ) -> None:
+        """Add this connector's widgets to an existing dashboard.
+
+        This is the composability API — multiple connectors contribute
+        widgets to the same dashboard.
+
+        Args:
+            dashboard: Target dashboard to add widgets to.
+            widget_names: Specific widgets to add, or None for all.
+        """
+        for widget in self.widgets():
+            if widget_names is None or widget.name in widget_names:
+                widget.build(dashboard)
 
     def dashboard(
         self,
@@ -142,12 +240,14 @@ class Connector(ABC):
         output: str = "output/dashboard.md",
         analyst: Analyst | None = None,
     ) -> Dashboard:
-        """Create a pre-built dashboard.
+        """Create a standalone dashboard from this connector's widgets.
+
+        For multi-connector dashboards, use contribute_widgets() instead.
 
         Args:
             name: Widget name to use, or None for all widgets.
             output: Output file path.
-            analyst: Existing Analyst, or creates a new one.
+            analyst: Existing Analyst (with data already loaded), or creates new one.
 
         Returns:
             A Dashboard ready to customize or save().
@@ -161,22 +261,15 @@ class Connector(ABC):
 
         dash = Dashboard(
             title=name or f"{self.name().title()} Analytics",
-            entities=self.entities(),
-            relationships=self.relationships(),
             output=output,
             analyst=analyst,
         )
 
-        # Apply widgets
-        available = self.widgets()
-        for widget in available:
-            if name is None or widget.name == name:
-                widget.build(dash)
-
+        self.contribute_widgets(dash, [name] if name else None)
         return dash
 
     def available_dashboards(self) -> list[str]:
-        """List available pre-built dashboard names."""
+        """List available pre-built dashboard/widget names."""
         return [w.name for w in self.widgets()]
 ```
 
@@ -214,47 +307,135 @@ class SourceHandler(ABC):
             os.unlink(tmp.name)
 ```
 
-### Layer 3: `Analyst.use()` integration
+### Layer 3: `Analyst` integration
 
 ```python
-# In analyst.py — add method
+# In analyst.py — add methods
 
-def use(self, connector: Connector) -> Analyst:
-    """Install a full-stack connector.
+class Analyst:
+    def __init__(self, ...):
+        ...
+        self._connectors: dict[str, Connector] = {}
 
-    Registers all data sources, entities, relationships, and makes
-    pre-built dashboards available.
+    def use(self, connector: Connector) -> Analyst:
+        """Install a full-stack connector.
 
-    Args:
-        connector: A Connector instance (e.g., GitHubConnector, StripeConnector).
+        Multiple connectors can be installed — they all share the same
+        DuckDB instance. Use add_relationship() to define cross-connector joins.
 
-    Returns:
-        self, for chaining.
-    """
-    connector.register(self)
-    self._connectors[connector.name()] = connector
-    return self
+        Args:
+            connector: A Connector instance.
+
+        Returns:
+            self, for chaining.
+        """
+        connector.register(self)
+        self._connectors[connector.name()] = connector
+        return self
+
+    def add_relationship(self, relationship: Relationship) -> Analyst:
+        """Add a relationship (useful for cross-connector joins).
+
+        Args:
+            relationship: A Relationship linking entities from any connectors.
+
+        Returns:
+            self, for chaining.
+        """
+        self._relationships.append(relationship)
+        self._query_builder = None
+        return self
+
+    @property
+    def connectors(self) -> dict[str, Connector]:
+        """Installed connectors by name."""
+        return self._connectors
 ```
 
-### Layer 4: Built-in connectors for common sources
+## Composability Examples
+
+### Example 1: GitHub + Jira — Engineering Velocity
 
 ```python
-# dashboardmd/connectors/api.py — REST API connector
+analyst = Analyst()
+analyst.use(GitHubConnector(token="...", repo="org/repo"))
+analyst.use(JiraConnector(url="...", project="PROJ"))
 
-class APIConnector(Connector):
-    """Quick connector for REST APIs.
+# Link PRs to Jira tickets (PR branches contain ticket keys)
+analyst.add_relationship(Relationship(
+    "jira_issues", "pull_requests", on=("key", "jira_key"), type="one_to_many"
+))
 
-    Usage:
-        api = APIConnector(
-            name="users_api",
-            endpoints={
-                "users": "https://api.example.com/users",
-                "posts": "https://api.example.com/posts",
-            },
-            headers={"Authorization": "Bearer token"},
-        )
-        analyst.use(api)
-    """
+# Unified dashboard
+dash = Dashboard(title="Engineering Velocity", analyst=analyst, output="velocity.md")
+gh.contribute_widgets(dash, ["PR Review"])
+jira.contribute_widgets(dash, ["Sprint Board"])
+dash.section("Cross-Platform Insights")
+dash.tile_sql("Cycle Time by Priority", """
+    SELECT j.priority, AVG(DATEDIFF('hour', j.created, p.merged_at)) as cycle_hours
+    FROM jira_issues j JOIN pull_requests p ON j.key = p.jira_key
+    WHERE p.merged_at IS NOT NULL
+    GROUP BY 1
+""")
+dash.save()
+```
+
+### Example 2: Stripe + Custom CRM — Revenue Analytics
+
+```python
+analyst = Analyst()
+analyst.use(StripeConnector(api_key="sk_..."))
+analyst.use(CustomConnector(
+    name="crm",
+    data={"customers": load_crm_data()},
+    entities=[Entity("customers", dimensions=[
+        Dimension("id", type="number", primary_key=True),
+        Dimension("segment", type="string"),
+        Dimension("region", type="string"),
+    ], measures=[
+        Measure("count", type="count"),
+    ])],
+))
+
+# Link Stripe charges to CRM customers
+analyst.add_relationship(Relationship(
+    "stripe_charges", "customers", on=("customer_email", "email"), type="many_to_one"
+))
+
+# Revenue by CRM segment
+analyst.query(
+    measures=["stripe_charges.total_amount"],
+    dimensions=["customers.segment"],
+)
+```
+
+### Example 3: Community + Core + Custom
+
+```python
+analyst = Analyst()
+
+# Community: pip install dashboardmd-github
+analyst.use(GitHubConnector(token="...", repo="org/repo"))
+
+# Core built-in: REST API
+analyst.use(APIConnector("deploy", endpoints={
+    "deploys": "https://internal-api.com/deploys"
+}, entities=[Entity("deploys", ...)]))
+
+# Custom: inline data
+analyst.add("team", [
+    {"name": "Alice", "github": "alice", "team": "backend"},
+    {"name": "Bob", "github": "bob", "team": "frontend"},
+])
+
+# All three sources, one query
+analyst.sql("""
+    SELECT t.team, COUNT(DISTINCT p.number) as prs, COUNT(DISTINCT d.id) as deploys
+    FROM team t
+    JOIN pull_requests p ON t.github = p.author
+    JOIN deploys d ON t.github = d.deployed_by
+    GROUP BY 1
+""")
 ```
 
 ## Example: GitHub Connector (external package)
@@ -278,12 +459,11 @@ class GitHubPRSource(SourceHandler):
 
     def register(self, conn, table_name):
         rows = self._fetch_prs()
-        rows = self._clean(rows)  # normalize dates, flatten nested fields
+        rows = self._clean(rows)
         self._register_rows(conn, table_name, rows)
 
     def _fetch_prs(self) -> list[dict]:
         """Paginated GitHub API fetch."""
-        import urllib.request, json
         # ... paginated fetch with auth header ...
         return all_prs
 
@@ -307,17 +487,23 @@ class GitHubPRSource(SourceHandler):
         return cleaned
 
     def describe(self):
-        return {"columns": [("number", "INTEGER"), ("title", "VARCHAR"), ...]}
+        return {"columns": [("number", "INTEGER"), ("title", "VARCHAR")]}
 
 
 class GitHubConnector(Connector):
     """Full GitHub analytics connector.
 
-    Usage:
-        gh = GitHubConnector(token="ghp_...", repo="org/repo")
-        analyst.use(gh)
-        dash = gh.dashboard("PR Review")
-        dash.save()
+    Designed to compose with other connectors:
+
+        analyst = Analyst()
+        analyst.use(GitHubConnector(token="...", repo="org/repo"))
+        analyst.use(JiraConnector(...))  # works together seamlessly
+
+        # Cross-connector query
+        analyst.query(
+            measures=["pull_requests.count"],
+            dimensions=["jira_issues.sprint"],
+        )
     """
 
     def __init__(self, token: str, repo: str):
@@ -373,6 +559,7 @@ class GitHubConnector(Connector):
         ]
 
     def relationships(self) -> list[Relationship]:
+        """Internal relationships between GitHub entities."""
         return [
             Relationship("pull_requests", "commits", on=("author", "author")),
             Relationship("issues", "pull_requests", on=("author", "author")),
@@ -384,18 +571,21 @@ class GitHubConnector(Connector):
                 name="PR Review",
                 title="Pull Request Review",
                 description="PR velocity, merge times, and contributor stats",
+                requires=["pull_requests"],
                 build=self._build_pr_review,
             ),
             DashboardWidget(
                 name="Issue Tracker",
                 title="Issue Analytics",
                 description="Issue volume, resolution time, label breakdown",
+                requires=["issues"],
                 build=self._build_issue_tracker,
             ),
             DashboardWidget(
                 name="Contributor",
                 title="Contributor Analytics",
                 description="Commit frequency, PR activity per author",
+                requires=["commits", "pull_requests"],
                 build=self._build_contributor,
             ),
         ]
@@ -408,9 +598,6 @@ class GitHubConnector(Connector):
         dash.tile("pull_requests.count", by="pull_requests.author", top=10, sort="desc")
         dash.section("PR by State")
         dash.tile("pull_requests.count", by="pull_requests.state")
-        dash.section("Merge Time Trend")
-        dash.tile("pull_requests.avg_merge_time", by="pull_requests.created_at",
-                   granularity="week")
 
     def _build_issue_tracker(self, dash):
         dash.section("Issue Overview")
@@ -418,30 +605,34 @@ class GitHubConnector(Connector):
         dash.tile("issues.avg_close_time", format=",.1f hrs")
         dash.section("Issues by State")
         dash.tile("issues.count", by="issues.state")
-        dash.section("Issue Volume Over Time")
-        dash.tile("issues.count", by="issues.created_at", granularity="week")
 
     def _build_contributor(self, dash):
         dash.section("Top Contributors")
         dash.tile("commits.count", by="commits.author", top=15, sort="desc")
-        dash.section("Commit Activity")
-        dash.tile("commits.count", by="commits.date", granularity="week")
 ```
 
 ## Key Design Decisions
 
-### 1. Connector vs SourceHandler
+### 1. Composability is the default
+
+The entire API assumes multiple connectors coexist:
+- `analyst.use()` is additive (never replaces)
+- `_relationships` is a list that extends (not replaces)
+- `contribute_widgets()` adds to existing dashboards
+- Cross-connector `add_relationship()` is a first-class operation
+
+### 2. Connector vs SourceHandler
 
 | | SourceHandler | Connector |
 |---|---|---|
 | **Scope** | Single table | Full data domain |
 | **Provides** | Data registration | Data + model + dashboards |
-| **Use case** | "Give me this table" | "Give me full analytics for X" |
-| **Packaging** | Part of core | Core base + external packages |
+| **Composability** | N/A — building block | Designed to mix with others |
+| **Packaging** | Part of core | Core base + community packages |
 
 SourceHandler remains the building block. Connector uses multiple SourceHandlers internally.
 
-### 2. Why `register()` pattern (not declarative config)?
+### 3. Why `register()` pattern (not declarative config)?
 
 Connectors call imperative `register()` instead of returning static config because:
 - Data fetching may need authentication, pagination, rate limiting
@@ -449,15 +640,14 @@ Connectors call imperative `register()` instead of returning static config becau
 - Some sources need multiple API calls composed together
 - Config-based approaches (YAML/JSON) can't express this
 
-### 3. Widget `build` callback
+### 4. Widgets declare dependencies
 
-Widgets use `build: Callable[[Dashboard], None]` — a function that receives a Dashboard
-and adds sections/tiles to it. This is maximally flexible:
-- Simple widgets just call `dash.section()` + `dash.tile()`
-- Complex widgets can use `dash.tile_sql()` for custom queries
-- Widgets can use notebookmd directly for charts
+Widgets have a `requires` field listing entity names. This enables:
+- Validation before building (are the required entities registered?)
+- Documentation (what entities does this widget need?)
+- Cross-connector widgets that require entities from multiple connectors
 
-### 4. Package convention
+### 5. Package convention
 
 External connector packages follow: `dashboardmd-{name}` (pip) / `dashboardmd_{name}` (import).
 
@@ -471,7 +661,7 @@ dashboardmd-github/
 │   └── widgets.py          # Pre-built dashboard builders
 ```
 
-### 5. Entry point discovery (future)
+### 6. Entry point discovery (future)
 
 ```toml
 # In dashboardmd-github's pyproject.toml
@@ -481,7 +671,6 @@ github = "dashboardmd_github:GitHubConnector"
 
 This enables auto-discovery:
 ```python
-# Future: dashboardmd discovers installed connectors
 from dashboardmd import list_connectors
 list_connectors()  # → ["github", "stripe", "jira"]
 ```
@@ -493,13 +682,13 @@ list_connectors()  # → ["github", "stripe", "jira"]
 |------|--------|
 | `dashboardmd/connector.py` | New — `Connector` base class + `DashboardWidget` |
 | `dashboardmd/sources/base.py` | Add `_register_rows()` helper |
-| `dashboardmd/analyst.py` | Add `use()` method + `_connectors` dict |
+| `dashboardmd/analyst.py` | Add `use()`, `add_relationship()`, `_connectors` dict |
 | `dashboardmd/__init__.py` | Export `Connector`, `DashboardWidget` |
 
 ### Phase 2: Example connector
 | File | Change |
 |------|--------|
-| `examples/connector-plugin/` | Example showing a custom connector with entities + widgets |
+| `examples/connector-plugin/` | Example showing composable connectors with cross-source queries |
 
 ### Phase 3: Built-in utility connectors
 | File | Change |
