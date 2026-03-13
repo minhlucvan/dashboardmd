@@ -1,0 +1,16 @@
+id,name,department_id,title,hire_date,salary,status
+1,Sarah Connor,10,Software Engineer,2022-03-15,95000,active
+2,John Reese,10,Senior Engineer,2021-06-01,125000,active
+3,Maria Lopez,20,Marketing Manager,2020-11-20,105000,active
+4,Alex Turner,10,Tech Lead,2019-08-10,145000,active
+5,Nina Patel,30,HR Specialist,2023-01-05,72000,active
+6,Omar Hassan,20,Content Writer,2023-04-18,65000,active
+7,Yuki Tanaka,10,Software Engineer,2023-07-01,92000,active
+8,Priya Sharma,30,HR Director,2018-02-28,130000,active
+9,James Wright,40,Sales Rep,2022-09-12,70000,active
+10,Lisa Chen,40,Sales Manager,2020-05-15,110000,active
+11,Tom Baker,10,Junior Developer,2024-01-10,68000,active
+12,Emily Ross,20,Marketing Analyst,2024-03-01,75000,active
+13,Carlos Rivera,40,Sales Rep,2023-11-15,70000,terminated
+14,Anna Schmidt,30,Recruiter,2024-06-01,67000,active
+15,David Park,10,DevOps Engineer,2022-11-08,115000,active

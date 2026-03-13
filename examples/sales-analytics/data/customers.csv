@@ -1,0 +1,13 @@
+id,name,email,segment,region,signup_date
+101,Alice Johnson,alice@example.com,Enterprise,North,2024-06-15
+102,Bob Smith,bob@example.com,SMB,South,2024-07-20
+103,Carol Davis,carol@example.com,Enterprise,East,2024-08-10
+104,Dan Wilson,dan@example.com,Mid-Market,West,2024-09-01
+105,Eva Martinez,eva@example.com,SMB,North,2024-09-15
+106,Frank Lee,frank@example.com,Enterprise,South,2024-10-01
+107,Grace Kim,grace@example.com,Mid-Market,East,2024-10-20
+108,Henry Brown,henry@example.com,SMB,West,2024-11-05
+109,Iris Chen,iris@example.com,Enterprise,North,2024-11-18
+110,Jack Taylor,jack@example.com,Mid-Market,South,2024-12-01
+111,Karen White,karen@example.com,SMB,East,2025-01-10
+112,Leo Garcia,leo@example.com,Enterprise,West,2025-02-01
