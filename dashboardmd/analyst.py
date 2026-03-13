@@ -118,6 +118,7 @@ class Analyst:
         self._entities: dict[str, Any] = {}  # name → Entity
         self._relationships: list[Any] = []
         self._query_builder: Any = None  # Lazy-initialized QueryBuilder
+        self._connectors: dict[str, Any] = {}  # name → Connector
 
     # ------------------------------------------------------------------
     # Source registration
@@ -228,6 +229,40 @@ class Analyst:
         self._relationships = relationships
         self._query_builder = None  # Reset cached builder
         return self
+
+    def add_relationship(self, relationship: Any) -> Analyst:
+        """Add a single relationship (useful for cross-connector joins).
+
+        Args:
+            relationship: A Relationship linking entities from any connectors.
+
+        Returns:
+            self, for chaining.
+        """
+        self._relationships.append(relationship)
+        self._query_builder = None
+        return self
+
+    def use(self, connector: Any) -> Analyst:
+        """Install a full-stack connector.
+
+        Multiple connectors can be installed — they all share the same
+        DuckDB instance. Use add_relationship() to define cross-connector joins.
+
+        Args:
+            connector: A Connector instance (e.g., GitHubConnector, StripeConnector).
+
+        Returns:
+            self, for chaining.
+        """
+        connector.register(self)
+        self._connectors[connector.name()] = connector
+        return self
+
+    @property
+    def connectors(self) -> dict[str, Any]:
+        """Installed connectors by name."""
+        return self._connectors
 
     @property
     def entities(self) -> dict[str, Any]:

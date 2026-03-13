@@ -13,8 +13,10 @@ Relationships, Queries, and Dashboards. It builds on notebookmd for Markdown ren
 
 ```
 dashboardmd/
-├── __init__.py              # Public API: Dashboard, Entity, Dimension, Measure, etc.
+├── __init__.py              # Public API: Dashboard, Entity, Connector, etc.
 ├── model.py                 # Entity, Dimension, Measure, Relationship dataclasses
+├── connector.py             # Connector base class + DashboardWidget
+├── analyst.py               # Analyst: DuckDB engine, use(), add(), sql(), query()
 ├── dashboard.py             # Dashboard: tiles, filters, sections, save()
 ├── query.py                 # Query builder: resolve joins, generate SQL/pandas
 ├── engine.py                # Execution engine: run queries against sources
@@ -23,8 +25,18 @@ dashboardmd/
 ├── refresh.py               # Re-run + metric diff tracking
 ├── cli.py                   # CLI entry point
 ├── py.typed                 # PEP 561 type checking marker
-└── interop/                 # Platform connectors
-    ├── __init__.py
+├── sources/                 # Data source handlers (SourceHandler subclasses)
+│   ├── base.py              # SourceHandler ABC + _register_rows() helper
+│   ├── file.py              # CSVSource, ParquetSource, JSONSource
+│   ├── database.py          # DuckDB, SQLite, Postgres, MySQL sources
+│   ├── dataframe.py         # DataFrameSource (pandas/polars)
+│   └── sql.py               # RawSQLSource
+├── connectors/              # Built-in connectors (BI platforms)
+│   ├── metabase.py          # MetabaseConnector
+│   ├── lookml.py            # LookMLConnector
+│   ├── cube.py              # CubeConnector
+│   └── powerbi.py           # PowerBIConnector
+└── interop/                 # Legacy import/export functions (still supported)
     ├── metabase.py           # from_metabase() / to_metabase()
     ├── lookml.py             # from_lookml() / to_lookml()
     ├── cube.py               # from_cube() / to_cube_schema()
@@ -41,8 +53,22 @@ dashboardmd/
 | Table link | `Relationship` | How entities join together |
 | Query | `Query` | Select measures + dimensions → get results |
 | Dashboard | `Dashboard` | Tiles bound to queries + global filters |
+| Integration | `Connector` | Full-stack plugin: sources + model + widgets |
 
 ## Key Patterns
+
+### Using connectors
+```python
+from dashboardmd import Analyst, Relationship
+from dashboardmd.connectors import MetabaseConnector
+
+analyst = Analyst()
+analyst.use(MetabaseConnector(metabase_metadata))
+analyst.use(MyCustomConnector(api_key="..."))
+
+# Cross-connector joins
+analyst.add_relationship(Relationship("orders", "events", on=("id", "order_id")))
+```
 
 ### Defining a model
 ```python
@@ -101,4 +127,6 @@ pytest tests/integration/ -v        # Integration tests only
 - All optional deps (pandas, matplotlib) use try/except with graceful fallback
 - Tests must pass with AND without optional dependencies
 - The data model must map 1:1 to existing BI platforms (Metabase, Looker, PowerBI, Cube)
-- Interop modules should enable import/export with BI platforms
+- BI platforms are native connectors — use MetabaseConnector, LookMLConnector, etc.
+- Legacy interop functions (from_metabase, to_metabase, etc.) are still supported
+- Custom connectors should implement the Connector base class for composability

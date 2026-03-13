@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+import os
+import tempfile
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
@@ -26,3 +29,31 @@ class SourceHandler(ABC):
     def describe(self) -> dict[str, Any]:
         """Return schema metadata: column names, types, row count estimate."""
         ...
+
+    def _register_rows(
+        self, conn: duckdb.DuckDBPyConnection, table_name: str, rows: list[dict[str, Any]]
+    ) -> None:
+        """Helper: load a list of dicts into DuckDB as a table.
+
+        Connector authors can use this to avoid temp-file boilerplate::
+
+            class MySource(SourceHandler):
+                def register(self, conn, table_name):
+                    rows = self._fetch_data()
+                    self._register_rows(conn, table_name, rows)
+        """
+        if not rows:
+            conn.execute(f'CREATE OR REPLACE TABLE "{table_name}" (placeholder INT)')
+            conn.execute(f'DELETE FROM "{table_name}"')
+            return
+
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
+        try:
+            json.dump(rows, tmp, default=str)
+            tmp.close()
+            conn.execute(
+                f'CREATE OR REPLACE TABLE "{table_name}" AS '
+                f"SELECT * FROM read_json_auto('{tmp.name}')"
+            )
+        finally:
+            os.unlink(tmp.name)

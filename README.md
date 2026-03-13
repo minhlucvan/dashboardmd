@@ -1,13 +1,13 @@
 # dashboardmd
 
-**Code-first analytics dashboard platform. Markdown output. Mirrors BI platform concepts.**
+**Code-first analytics dashboard platform. Connectors for everything. Markdown output.**
 
-> Same data model as Metabase, Looker, PowerBI, Cube — but in Python, for agents,
-> outputting Markdown. Import from them. Export to them. Or use standalone.
+> Universal data model — same concepts as Metabase, Looker, PowerBI, Cube —
+> but in Python, for agents, with composable connectors that work together.
 
 ## The Core Idea
 
-Every BI platform — Metabase, Looker, PowerBI, Cube — uses the same foundational concepts:
+Every analytics platform uses the same foundational concepts:
 
 1. **Entities** (tables/views with semantic meaning)
 2. **Dimensions** (attributes you group and filter by)
@@ -16,30 +16,34 @@ Every BI platform — Metabase, Looker, PowerBI, Cube — uses the same foundati
 5. **Queries** (select measures + dimensions → get results)
 6. **Dashboards** (tiles bound to queries + global filters)
 
-dashboardmd mirrors these concepts exactly in Python. The result is a data model that agents can
-build programmatically, that maps 1:1 to existing BI platforms, and that renders to Markdown.
-
-It connects to data sources you already use — **CSV**, **Parquet**, **JSON**, **DuckDB**,
-**PostgreSQL**, **MySQL**, **SQLite**, **pandas DataFrames** — and interops with BI platforms.
+dashboardmd mirrors these concepts in Python. **Connectors** are the universal
+integration layer — whether your data comes from CSV files, REST APIs, BI
+platforms, or community packages, everything plugs into the same system.
 
 ```
-     Data Sources                      BI Platforms
-  ┌─────────────────────┐        ┌─────────────────────┐
-  │ CSV / Parquet / JSON │        │ Metabase            │
-  │ PostgreSQL / MySQL  │        │ Looker / LookML     │
-  │ SQLite / DuckDB     │        │ Power BI            │
-  │ pandas DataFrames   │        │ Cube.js             │
-  └───────────┬─────────┘        └───────────┬─────────┘
-              │                              │
-              └──────────────┬───────────────┘
+     Connectors                           Built-in
+  ┌──────────────────────────┐     ┌───────────────────────┐
+  │ Data Connectors          │     │ File Sources           │
+  │  • Custom (your code)    │     │  • CSV / Parquet / JSON│
+  │  • Community (pip)       │     │  • DuckDB / SQLite     │
+  │  • API / Callable        │     │  • PostgreSQL / MySQL  │
+  │                          │     │  • pandas DataFrames   │
+  │ BI Platform Connectors   │     │                       │
+  │  • MetabaseConnector     │     │ Semantic Layer         │
+  │  • LookMLConnector       │     │  • Entity / Dimension  │
+  │  • CubeConnector         │     │  • Measure / Query     │
+  │  • PowerBIConnector      │     │  • Relationship        │
+  └────────────┬─────────────┘     └───────────┬───────────┘
+               │                               │
+               └───────────────┬───────────────┘
+                               ▼
+                    ┌──────────────────┐
+                    │   dashboardmd    │
+                    │    Analyst       │  ← DuckDB engine
+                    │  analyst.use()   │  ← composable connectors
+                    └────────┬─────────┘
+                             │
                              ▼
-                    ┌─────────────────┐
-                    │   dashboardmd   │
-                    │    Analyst      │  ← DuckDB engine
-                    │  (core SQL)    │
-                    └─────────┬───────┘
-                              │
-                              ▼
                 ┌──────────────────────────┐
                 │      Markdown Report     │
                 │        (.md files)       │
@@ -188,6 +192,155 @@ dash.tile_sql("Top Customers", """
 dash.save()  # → output/weekly.md
 ```
 
+## Connectors
+
+Connectors are the universal integration layer. A connector bundles everything
+needed to analyze a data domain: data sources, cleaning, entity definitions
+(dimensions/measures), relationships, and pre-built dashboard widgets.
+
+### Composable by design
+
+Multiple connectors install into one Analyst and work together:
+
+```python
+from dashboardmd import Analyst, Relationship
+from dashboardmd.connectors import MetabaseConnector
+
+analyst = Analyst()
+
+# BI platform connector — import your existing Metabase model
+analyst.use(MetabaseConnector(metabase_metadata))
+
+# Community connector — pip install dashboardmd-github
+analyst.use(GitHubConnector(token="...", repo="org/repo"))
+
+# Custom connector — your own data
+analyst.use(MyInternalConnector(api_key="..."))
+
+# Cross-connector joins — link data across boundaries
+analyst.add_relationship(Relationship(
+    "orders", "pull_requests", on=("id", "order_id"), type="one_to_many"
+))
+
+# Query across everything as one system
+analyst.query(
+    measures=["orders.revenue"],
+    dimensions=["pull_requests.author"],
+)
+```
+
+### BI Platform Connectors (built-in)
+
+Import data models from any BI platform. They implement the same
+`Connector` interface, so they compose with data connectors:
+
+```python
+from dashboardmd import Analyst
+from dashboardmd.connectors import MetabaseConnector, LookMLConnector, CubeConnector, PowerBIConnector
+
+# Import from Metabase
+analyst = Analyst()
+analyst.use(MetabaseConnector(metabase_metadata_dict))
+
+# Import from LookML / Looker
+analyst.use(LookMLConnector(lookml_model_dict))
+
+# Import from Cube.js
+analyst.use(CubeConnector(cube_schema_dict))
+
+# Import from PowerBI
+analyst.use(PowerBIConnector(powerbi_model_dict))
+```
+
+### Custom Connectors
+
+Build your own connector for any data domain:
+
+```python
+from dashboardmd import Connector, DashboardWidget, Entity, Dimension, Measure
+from dashboardmd.sources.base import SourceHandler
+
+class MyAPISource(SourceHandler):
+    def __init__(self, url, token):
+        self.url = url
+        self.token = token
+
+    def register(self, conn, table_name):
+        rows = self._fetch()           # your API logic
+        rows = self._clean(rows)       # your cleaning logic
+        self._register_rows(conn, table_name, rows)  # built-in helper
+
+    def describe(self):
+        return {"columns": []}
+
+class MyConnector(Connector):
+    def __init__(self, api_key):
+        self.api_key = api_key
+
+    def name(self):
+        return "my_service"
+
+    def sources(self):
+        return {"events": MyAPISource("https://api.example.com/events", self.api_key)}
+
+    def entities(self):
+        return [Entity("events", dimensions=[
+            Dimension("id", type="number", primary_key=True),
+            Dimension("type", type="string"),
+            Dimension("timestamp", type="time"),
+        ], measures=[
+            Measure("count", type="count"),
+        ])]
+
+    def widgets(self):
+        return [DashboardWidget(
+            name="Overview",
+            title="Event Analytics",
+            requires=["events"],
+            build=self._build_overview,
+        )]
+
+    def _build_overview(self, dash):
+        dash.section("Events")
+        dash.tile("events.count", by="events.type")
+
+# Use it
+analyst = Analyst()
+analyst.use(MyConnector(api_key="..."))
+```
+
+### Multi-Connector Dashboards
+
+Connectors contribute widgets to shared dashboards:
+
+```python
+from dashboardmd import Analyst, Dashboard, Relationship
+
+analyst = Analyst()
+analyst.use(project_connector)
+analyst.use(team_connector)
+
+# Cross-connector relationship
+analyst.add_relationship(Relationship(
+    "tasks", "team_members", on=("assignee", "username"), type="many_to_one"
+))
+
+# Build unified dashboard with widgets from both connectors
+dash = Dashboard(title="Engineering Velocity", analyst=analyst, output="velocity.md")
+project_connector.contribute_widgets(dash, ["Project Status"])
+team_connector.contribute_widgets(dash, ["Team Overview"])
+
+# Add custom cross-connector analysis
+dash.section("Cross-Team Insights")
+dash.tile_sql("Hours by Department", """
+    SELECT tm.department, SUM(tl.hours) as total
+    FROM time_logs tl JOIN team_members tm ON tl.username = tm.username
+    GROUP BY 1 ORDER BY 2 DESC
+""")
+
+dash.save()
+```
+
 ## Concept Mapping
 
 | Concept | Looker | PowerBI | Cube | Metabase | **dashboardmd** |
@@ -198,29 +351,7 @@ dash.save()  # → output/weekly.md
 | Table link | explore + join | Relationship | joins | FK | **Relationship** |
 | Query | Explore query | Visual query | /load API | Question | **Query** |
 | Dashboard | Dashboard + tiles | Report + visuals | (frontend) | Dashboard + cards | **Dashboard + Tiles** |
-
-## BI Platform Interop
-
-Convert between dashboardmd and any BI platform's data model:
-
-```python
-from dashboardmd.interop import from_metabase, to_metabase
-from dashboardmd.interop import from_lookml, to_lookml
-from dashboardmd.interop import from_cube, to_cube_schema
-from dashboardmd.interop import from_powerbi, to_powerbi
-
-# Import from Metabase metadata export
-entities, relationships = from_metabase(metabase_metadata_dict)
-
-# Export to Cube.js schema
-cube_schema = to_cube_schema(entities, relationships)
-
-# Import from LookML model
-entities, relationships = from_lookml(lookml_model_dict)
-
-# Export to PowerBI tabular model
-powerbi_model = to_powerbi(entities, relationships)
-```
+| Integration | — | — | — | — | **Connector** |
 
 ## CLI
 
