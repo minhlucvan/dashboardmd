@@ -23,33 +23,21 @@ It speaks SQL-like query semantics and connects to the data sources you already 
 **PostgreSQL**, **MySQL**, **MongoDB**, **DuckDB**, **CSV**, and **MindsDB**.
 
 ```
-                ┌──────────────┐
-                │ Data Sources │
-                └──────┬───────┘
-                       │
-        ┌──────────────┼──────────────┐
-        │              │              │
-   ┌────┴─────┐  ┌─────┴────┐  ┌─────┴─────┐
-   │PostgreSQL│  │  DuckDB  │  │    CSV    │
-   │  MySQL   │  │  MongoDB │  │  MindsDB  │
-   └────┬─────┘  └─────┬────┘  └─────┬─────┘
-        │              │              │
-        └──────────────┼──────────────┘
-                       ▼
-          ┌────────────────────────┐
-          │      dashboardmd       │
-          │  SQL-like query engine │
-          │      Python API        │
-          └─────┬────────────┬─────┘
-                │            │
-        ┌───────▼──┐   ┌─────▼────────┐
-        │ Markdown │   │ BI Platforms  │
-        │  Report  │   │──────────────│
-        │(.md +    │   │  Metabase    │
-        │ assets/) │   │  Looker      │
-        └──────────┘   │  PowerBI     │
-                       │  Cube        │
-                       └──────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                     │
+│   PostgreSQL ──────┐                                                │
+│   MySQL      ──────┤                                                │
+│   MongoDB    ──────┤           ┌───────────────────┐                │
+│   DuckDB     ──────┼───►      │   dashboardmd     │   ◄──── Metabase
+│   CSV        ──────┤          │  SQL-like query   │   ◄──── Looker
+│   MindsDB    ──────┘          │    Python API     │   ◄──── PowerBI
+│                               └────────┬──────────┘   ◄──── Cube
+│                                        │                            │
+│                                        ▼                            │
+│                                  Markdown report                    │
+│                                  (.md + assets/)                    │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Installation
