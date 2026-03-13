@@ -10,14 +10,33 @@ import pytest
 class TestRefresh:
     """refresh() re-runs a dashboard and compares metrics to the previous run."""
 
-    def test_refresh_produces_new_output(self, tmp_output_dir: Path) -> None:
+    def test_refresh_produces_new_output(self, tmp_output_dir: Path, orders_csv: Path) -> None:
         """refresh() should re-render the dashboard to the output path."""
+        from dashboardmd.dashboard import Dashboard
+        from dashboardmd.model import Dimension, Entity, Measure
         from dashboardmd.refresh import refresh
 
-        # First need a dashboard to refresh
-        # This test verifies that the refresh mechanism can be invoked
-        # and produces a new output file
-        pytest.skip("Requires full Dashboard implementation")
+        orders = Entity(
+            name="orders",
+            source=orders_csv,
+            dimensions=[Dimension("id", type="number", primary_key=True)],
+            measures=[Measure("count", type="count")],
+        )
+        output_path = tmp_output_dir / "refresh_test.md"
+        dash = Dashboard(title="Test", entities=[orders], output=str(output_path))
+        dash.section("Overview")
+        dash.tile("orders.count")
+        dash.save()
+
+        # First refresh — no previous snapshot, returns empty diffs
+        diffs = refresh(dash, snapshot_path=tmp_output_dir / "snapshot.json")
+        assert diffs == []
+        assert output_path.exists()
+
+        # Second refresh — compares to previous snapshot
+        diffs = refresh(dash, snapshot_path=tmp_output_dir / "snapshot.json")
+        assert len(diffs) >= 1
+        assert diffs[0].absolute_change == 0  # Same data, no change
 
     def test_refresh_returns_metric_diff(self) -> None:
         """refresh() should return a diff of current vs previous metric values."""
@@ -77,3 +96,20 @@ class TestRefresh:
         )
         text = str(diff)
         assert "revenue" in text.lower() or "orders.revenue" in text
+
+
+class TestSnapshot:
+    """Snapshot save/load for metric tracking."""
+
+    def test_snapshot_save_and_load(self, tmp_path: Path) -> None:
+        """Snapshot should save to JSON and load back."""
+        from dashboardmd.refresh import Snapshot
+
+        snap = Snapshot(title="Test", metrics={"orders.count": 20.0})
+        path = tmp_path / "snap.json"
+        snap.save(path)
+        assert path.exists()
+
+        loaded = Snapshot.load(path)
+        assert loaded.title == "Test"
+        assert loaded.metrics["orders.count"] == 20.0
