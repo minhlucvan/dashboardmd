@@ -23,21 +23,32 @@ It speaks SQL-like query semantics and connects to the data sources you already 
 **PostgreSQL**, **MySQL**, **MongoDB**, **DuckDB**, **CSV**, and **MindsDB**.
 
 ```
-Databases
-─────────
-PostgreSQL ────┐
-MySQL      ────┤
-MongoDB    ────┤    ┌──────────┐        ┌────────────────────┐
-DuckDB     ────┘───►│dashboard │ ─────► │  Markdown report   │
-CSV  ─────────┐     │    md    │        │  (.md + assets/)   │
-MindsDB  ────┘     └──────────┘        └────────────────────┘
-─────────
-Providers
-─────────
-Metabase  ────┐
-Looker    ────┤
-PowerBI   ────┤
-Cube      ────┘
+                        DATA SOURCES
+        (all sources provide data to dashboardmd)
+
+     Databases / Files                 BI Providers
+  ┌─────────────────────┐        ┌─────────────────────┐
+  │ PostgreSQL          │        │ Metabase            │
+  │ MySQL               │        │ Looker              │
+  │ MongoDB             │        │ Power BI            │
+  │ DuckDB              │        │ Cube                │
+  │ CSV                 │        │                     │
+  └───────────┬─────────┘        └───────────┬─────────┘
+              │                              │
+              └──────────────┬───────────────┘
+                             ▼
+                    ┌─────────────────┐
+                    │   dashboardmd   │
+                    │  dashboard DSL  │
+                    │  build logic    │
+                    └─────────┬───────┘
+                              │
+                              ▼
+                ┌──────────────────────────┐
+                │      Markdown Report     │
+                │        (.md files)       │
+                │        + assets/         │
+                └──────────────────────────┘
 ```
 
 ## Installation
