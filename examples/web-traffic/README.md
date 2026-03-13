@@ -10,11 +10,9 @@ A website analytics dashboard tracking pageviews, traffic sources, devices, and 
 ## What It Demonstrates
 
 - Using `Analyst` for SQL queries + `notebookmd` for rendering
-- Plotly funnel chart for conversion analysis
-- Grouped bar charts for source attribution (sessions vs conversions)
-- Multi-line time series for daily traffic trends
-- Horizontal bar charts with duration annotations
-- Pie chart for device distribution
+- Matplotlib charts rendered as PNG images (no browser needed)
+- Built-in `n.bar_chart()` and `n.line_chart()` for simple charts
+- Custom `n.figure()` for funnel, grouped bars, pie charts
 
 ## Charts
 
@@ -29,8 +27,8 @@ A website analytics dashboard tracking pageviews, traffic sources, devices, and 
 
 ```bash
 cd examples/web-traffic
-pip install "dashboardmd[plotly]"
+pip install "dashboardmd[plotting]"
 python dashboard.py
 ```
 
-Generates `dashboard.md` with interactive charts in `assets/`.
+Generates `dashboard.md` with PNG chart images in `assets/`.

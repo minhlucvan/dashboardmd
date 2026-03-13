@@ -1,14 +1,14 @@
 # Sales Analytics Dashboard
 
-_Generated: 2026-03-13 04:44:00_
+_Generated: 2026-03-13 04:55:22_
 
 ## Artifacts
 
-- [revenue_by_segment.html](assets/revenue_by_segment.html)
-- [revenue_by_category.html](assets/revenue_by_category.html)
-- [order_status.html](assets/order_status.html)
-- [monthly_trend.html](assets/monthly_trend.html)
-- [regional_performance.html](assets/regional_performance.html)
+- [bar_1.png](assets/bar_1.png)
+- [revenue_by_category.png](assets/revenue_by_category.png)
+- [order_status.png](assets/order_status.png)
+- [monthly_trend.png](assets/monthly_trend.png)
+- [regional_performance.png](assets/regional_performance.png)
 
 
 ---
@@ -24,16 +24,16 @@ _Generated: 2026-03-13 04:44:00_
 
 ## Revenue by Customer Segment
 
-![Revenue by customer segment](assets/revenue_by_segment.html)
+![Revenue by Segment](assets/bar_1.png)
 
-*Revenue by customer segment*
+*Revenue by Segment*
 
 
 ---
 
 ## Revenue by Product Category
 
-![Revenue share by product category](assets/revenue_by_category.html)
+![Revenue share by product category](assets/revenue_by_category.png)
 
 *Revenue share by product category*
 
@@ -42,7 +42,7 @@ _Generated: 2026-03-13 04:44:00_
 
 ## Order Status
 
-![Order count by status](assets/order_status.html)
+![Order count by status](assets/order_status.png)
 
 *Order count by status*
 
@@ -51,7 +51,7 @@ _Generated: 2026-03-13 04:44:00_
 
 ## Monthly Revenue Trend
 
-![Monthly revenue and order trend](assets/monthly_trend.html)
+![Monthly revenue and order trend](assets/monthly_trend.png)
 
 *Monthly revenue and order trend*
 
@@ -77,7 +77,7 @@ _shape: 5 rows × 4 cols_
 
 ## Regional Performance
 
-![Revenue by region](assets/regional_performance.html)
+![Revenue by region](assets/regional_performance.png)
 
 *Revenue by region*
 

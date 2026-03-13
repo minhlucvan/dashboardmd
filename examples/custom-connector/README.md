@@ -1,6 +1,6 @@
 # Custom Connector Example
 
-Demonstrates how to build custom `SourceHandler` subclasses to plug any data source into dashboardmd's DuckDB engine, with interactive Plotly charts.
+Demonstrates how to build custom `SourceHandler` subclasses to plug any data source into dashboardmd's DuckDB engine, with matplotlib PNG charts.
 
 ## Custom Connectors
 
@@ -69,8 +69,8 @@ entity = Entity("my_table", source=MySource(...), dimensions=[...], measures=[..
 
 ```bash
 cd examples/custom-connector
-pip install "dashboardmd[plotly]"
+pip install "dashboardmd[plotting]"
 python dashboard.py
 ```
 
-Generates `dashboard.md` with interactive charts in `assets/`.
+Generates `dashboard.md` with PNG chart images in `assets/`.

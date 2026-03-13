@@ -11,10 +11,10 @@ A sales analytics dashboard analyzing orders, customers, and products for an e-c
 ## What It Demonstrates
 
 - Using `Analyst` for SQL queries + `notebookmd` for rendering
-- Interactive Plotly charts: bar charts, pie charts, dual-axis line+bar trend
+- Matplotlib charts rendered as PNG images (no browser needed)
 - KPI metric cards via `n.metric_row()`
+- Built-in `n.bar_chart()` for simple charts, `n.figure()` for custom matplotlib plots
 - Tables via `n.table()` for detailed data (top customers)
-- Plotly charts saved as interactive HTML assets
 
 ## Charts
 
@@ -28,8 +28,8 @@ A sales analytics dashboard analyzing orders, customers, and products for an e-c
 
 ```bash
 cd examples/sales-analytics
-pip install "dashboardmd[plotly]"
+pip install "dashboardmd[plotting]"
 python dashboard.py
 ```
 
-Generates `dashboard.md` with interactive charts in `assets/`.
+Generates `dashboard.md` with PNG chart images in `assets/`.

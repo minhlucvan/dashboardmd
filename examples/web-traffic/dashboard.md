@@ -1,15 +1,15 @@
 # Web Traffic Dashboard
 
-_Generated: 2026-03-13 04:44:03_
+_Generated: 2026-03-13 04:55:25_
 
 ## Artifacts
 
-- [traffic_by_source.html](assets/traffic_by_source.html)
-- [traffic_by_device.html](assets/traffic_by_device.html)
-- [top_pages.html](assets/top_pages.html)
-- [conversion_funnel.html](assets/conversion_funnel.html)
-- [conversions_by_source.html](assets/conversions_by_source.html)
-- [daily_trend.html](assets/daily_trend.html)
+- [bar_1.png](assets/bar_1.png)
+- [traffic_by_device.png](assets/traffic_by_device.png)
+- [top_pages.png](assets/top_pages.png)
+- [conversion_funnel.png](assets/conversion_funnel.png)
+- [conversions_by_source.png](assets/conversions_by_source.png)
+- [line_2.png](assets/line_2.png)
 
 
 ---
@@ -25,16 +25,16 @@ _Generated: 2026-03-13 04:44:03_
 
 ## Traffic by Source
 
-![Pageviews by traffic source](assets/traffic_by_source.html)
+![Pageviews by Source](assets/bar_1.png)
 
-*Pageviews by traffic source*
+*Pageviews by Source*
 
 
 ---
 
 ## Traffic by Device
 
-![Device distribution](assets/traffic_by_device.html)
+![Device distribution](assets/traffic_by_device.png)
 
 *Device distribution*
 
@@ -43,7 +43,7 @@ _Generated: 2026-03-13 04:44:03_
 
 ## Top Pages
 
-![Pages ranked by views with average duration](assets/top_pages.html)
+![Pages ranked by views with average duration](assets/top_pages.png)
 
 *Pages ranked by views with average duration*
 
@@ -52,7 +52,7 @@ _Generated: 2026-03-13 04:44:03_
 
 ## Conversion Funnel
 
-![Conversion funnel from session to purchase](assets/conversion_funnel.html)
+![Conversion funnel from session to purchase](assets/conversion_funnel.png)
 
 *Conversion funnel from session to purchase*
 
@@ -61,7 +61,7 @@ _Generated: 2026-03-13 04:44:03_
 
 ## Conversions by Source
 
-![Sessions vs conversions by source](assets/conversions_by_source.html)
+![Sessions vs conversions by source](assets/conversions_by_source.png)
 
 *Sessions vs conversions by source*
 
@@ -70,9 +70,9 @@ _Generated: 2026-03-13 04:44:03_
 
 ## Daily Traffic Trend
 
-![Daily traffic trend](assets/daily_trend.html)
+![Daily Traffic Trend](assets/line_2.png)
 
-*Daily traffic trend*
+*Daily Traffic Trend*
 
 
 ---

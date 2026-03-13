@@ -1,13 +1,13 @@
 # HR Dashboard
 
-_Generated: 2026-03-13 04:44:02_
+_Generated: 2026-03-13 04:55:23_
 
 ## Artifacts
 
-- [headcount_by_dept.html](assets/headcount_by_dept.html)
-- [budget_utilization.html](assets/budget_utilization.html)
-- [salary_by_title.html](assets/salary_by_title.html)
-- [tenure_distribution.html](assets/tenure_distribution.html)
+- [headcount_by_dept.png](assets/headcount_by_dept.png)
+- [budget_utilization.png](assets/budget_utilization.png)
+- [salary_by_title.png](assets/salary_by_title.png)
+- [tenure_distribution.png](assets/tenure_distribution.png)
 
 
 ---
@@ -23,7 +23,7 @@ _Generated: 2026-03-13 04:44:02_
 
 ## Headcount by Department
 
-![Headcount and average salary by department](assets/headcount_by_dept.html)
+![Headcount and average salary by department](assets/headcount_by_dept.png)
 
 *Headcount and average salary by department*
 
@@ -32,7 +32,7 @@ _Generated: 2026-03-13 04:44:02_
 
 ## Department Budget Utilization
 
-![Budget vs salary spend by department](assets/budget_utilization.html)
+![Budget vs salary spend by department](assets/budget_utilization.png)
 
 *Budget vs salary spend by department*
 
@@ -41,7 +41,7 @@ _Generated: 2026-03-13 04:44:02_
 
 ## Salary Distribution by Title
 
-![Average salary by title](assets/salary_by_title.html)
+![Average salary by title](assets/salary_by_title.png)
 
 *Average salary by title*
 
@@ -50,7 +50,7 @@ _Generated: 2026-03-13 04:44:02_
 
 ## Tenure Distribution
 
-![Employee tenure distribution](assets/tenure_distribution.html)
+![Employee tenure distribution](assets/tenure_distribution.png)
 
 *Employee tenure distribution*
 

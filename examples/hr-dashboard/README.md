@@ -10,7 +10,7 @@ A workforce analytics dashboard covering headcount, compensation, budget utiliza
 ## What It Demonstrates
 
 - Using `Analyst` for SQL queries + `notebookmd` for rendering
-- Interactive Plotly charts: grouped bars, horizontal bars, pie charts
+- Matplotlib charts rendered as PNG images (no browser needed)
 - KPI metric cards for headcount summary
 - DuckDB features in SQL (FILTER, DATEDIFF, CASE expressions)
 - Tables for detailed data (recent hires)
@@ -26,8 +26,8 @@ A workforce analytics dashboard covering headcount, compensation, budget utiliza
 
 ```bash
 cd examples/hr-dashboard
-pip install "dashboardmd[plotly]"
+pip install "dashboardmd[plotting]"
 python dashboard.py
 ```
 
-Generates `dashboard.md` with interactive charts in `assets/`.
+Generates `dashboard.md` with PNG chart images in `assets/`.

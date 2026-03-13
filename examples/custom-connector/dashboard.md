@@ -1,15 +1,15 @@
 # Project Tracker Dashboard
 
-_Generated: 2026-03-13 04:44:05_
+_Generated: 2026-03-13 04:55:27_
 
 ## Artifacts
 
-- [budget_by_team.html](assets/budget_by_team.html)
-- [tasks_by_status.html](assets/tasks_by_status.html)
-- [tasks_by_priority.html](assets/tasks_by_priority.html)
-- [workload_by_assignee.html](assets/workload_by_assignee.html)
-- [project_health.html](assets/project_health.html)
-- [team_cost.html](assets/team_cost.html)
+- [bar_1.png](assets/bar_1.png)
+- [tasks_by_status.png](assets/tasks_by_status.png)
+- [tasks_by_priority.png](assets/tasks_by_priority.png)
+- [workload_by_assignee.png](assets/workload_by_assignee.png)
+- [project_health.png](assets/project_health.png)
+- [team_cost.png](assets/team_cost.png)
 
 
 ---
@@ -25,16 +25,16 @@ _Generated: 2026-03-13 04:44:05_
 
 ## Budget by Team
 
-![Budget allocation by team](assets/budget_by_team.html)
+![Budget by Team](assets/bar_1.png)
 
-*Budget allocation by team*
+*Budget by Team*
 
 
 ---
 
 ## Tasks by Status
 
-![Task status distribution](assets/tasks_by_status.html)
+![Task status distribution](assets/tasks_by_status.png)
 
 *Task status distribution*
 
@@ -43,7 +43,7 @@ _Generated: 2026-03-13 04:44:05_
 
 ## Tasks by Priority
 
-![Task count by priority level](assets/tasks_by_priority.html)
+![Task count by priority level](assets/tasks_by_priority.png)
 
 *Task count by priority level*
 
@@ -52,7 +52,7 @@ _Generated: 2026-03-13 04:44:05_
 
 ## Workload by Assignee
 
-![Actual vs estimated hours by assignee](assets/workload_by_assignee.html)
+![Actual vs estimated hours by assignee](assets/workload_by_assignee.png)
 
 *Actual vs estimated hours by assignee*
 
@@ -61,7 +61,7 @@ _Generated: 2026-03-13 04:44:05_
 
 ## Project Health
 
-![Project completion rates](assets/project_health.html)
+![Project completion rates](assets/project_health.png)
 
 *Project completion rates*
 
@@ -82,7 +82,7 @@ _shape: 5 rows × 6 cols_
 
 ## Team Cost Analysis
 
-![Total labor cost by team](assets/team_cost.html)
+![Total labor cost by team](assets/team_cost.png)
 
 *Total labor cost by team*
 

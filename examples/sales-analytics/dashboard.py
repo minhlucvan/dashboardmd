@@ -1,11 +1,13 @@
 """Sales Analytics Dashboard.
 
 Analyzes order data across customers, products, and time periods.
-Uses Analyst for queries and notebookmd with Plotly for rich visualizations.
+Uses Analyst for queries and notebookmd with matplotlib for PNG chart output.
 """
 
-import plotly.express as px
-import plotly.graph_objects as go
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import pandas as pd
 from notebookmd import nb
 
 from dashboardmd import Analyst
@@ -20,7 +22,7 @@ analyst.add("customers", "data/customers.csv")
 analyst.add("products", "data/products.csv")
 
 # ---------------------------------------------------------------------------
-# Build report with notebookmd + plotly
+# Build report with notebookmd + matplotlib
 # ---------------------------------------------------------------------------
 
 n = nb("dashboard.md", title="Sales Analytics Dashboard")
@@ -45,116 +47,98 @@ with n.section("Key Metrics"):
 
 # --- Revenue by Customer Segment ---
 with n.section("Revenue by Customer Segment"):
-    rows = analyst.sql("""
+    df = analyst.sql("""
         SELECT c.segment, SUM(o.amount) AS revenue
-        FROM orders o
-        JOIN customers c ON o.customer_id = c.id
+        FROM orders o JOIN customers c ON o.customer_id = c.id
         WHERE o.status = 'completed'
         GROUP BY 1 ORDER BY revenue DESC
-    """).fetchall()
+    """).df()
 
-    fig = px.bar(
-        x=[r[0] for r in rows], y=[r[1] for r in rows],
-        labels={"x": "Segment", "y": "Revenue ($)"},
-        color_discrete_sequence=["#636EFA"],
-    )
-    fig.update_layout(showlegend=False)
-    n.plotly_chart(fig, filename="revenue_by_segment.html", caption="Revenue by customer segment")
+    n.bar_chart(df, x="segment", y="revenue", title="Revenue by Segment")
 
 # --- Revenue by Product Category ---
 with n.section("Revenue by Product Category"):
     rows = analyst.sql("""
         SELECT p.category, SUM(o.amount) AS revenue
-        FROM orders o
-        JOIN products p ON o.product_id = p.id
+        FROM orders o JOIN products p ON o.product_id = p.id
         WHERE o.status = 'completed'
         GROUP BY 1 ORDER BY revenue DESC
     """).fetchall()
 
-    fig = px.pie(
-        names=[r[0] for r in rows], values=[r[1] for r in rows],
-        color_discrete_sequence=px.colors.qualitative.Set2,
-    )
-    n.plotly_chart(fig, filename="revenue_by_category.html", caption="Revenue share by product category")
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.pie([r[1] for r in rows], labels=[r[0] for r in rows], autopct="%1.0f%%",
+           colors=["#66c2a5", "#fc8d62", "#8da0cb"])
+    ax.set_title("Revenue by Category")
+    n.figure(fig, "revenue_by_category.png", caption="Revenue share by product category")
+    plt.close(fig)
 
 # --- Order Status ---
 with n.section("Order Status"):
-    rows = analyst.sql("""
+    df = analyst.sql("""
         SELECT status, COUNT(*) AS count FROM orders GROUP BY 1 ORDER BY count DESC
-    """).fetchall()
+    """).df()
 
-    fig = px.bar(
-        x=[r[0] for r in rows], y=[r[1] for r in rows],
-        labels={"x": "Status", "y": "Count"},
-        color=[r[0] for r in rows],
-        color_discrete_map={"completed": "#2ecc71", "pending": "#f39c12", "cancelled": "#e74c3c"},
-    )
-    fig.update_layout(showlegend=False)
-    n.plotly_chart(fig, filename="order_status.html", caption="Order count by status")
+    colors = {"completed": "#2ecc71", "pending": "#f39c12", "cancelled": "#e74c3c"}
+    fig, ax = plt.subplots(figsize=(6, 4))
+    bars = ax.bar(df["status"], df["count"], color=[colors.get(s, "#636EFA") for s in df["status"]])
+    ax.set_ylabel("Count")
+    ax.set_title("Order Status")
+    ax.bar_label(bars)
+    fig.tight_layout()
+    n.figure(fig, "order_status.png", caption="Order count by status")
+    plt.close(fig)
 
 # --- Monthly Revenue Trend ---
 with n.section("Monthly Revenue Trend"):
-    rows = analyst.sql("""
-        SELECT
-            strftime(date, '%Y-%m') AS month,
-            COUNT(*) AS orders,
-            SUM(amount) AS revenue,
-            ROUND(AVG(amount), 2) AS avg_order
-        FROM orders
-        WHERE status = 'completed'
+    df = analyst.sql("""
+        SELECT strftime(date, '%Y-%m') AS month, COUNT(*) AS orders,
+               SUM(amount) AS revenue, ROUND(AVG(amount), 2) AS avg_order
+        FROM orders WHERE status = 'completed'
         GROUP BY 1 ORDER BY 1
-    """).fetchall()
+    """).df()
 
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=[r[0] for r in rows], y=[r[2] for r in rows],
-        mode="lines+markers", name="Revenue",
-        line={"color": "#636EFA", "width": 3},
-    ))
-    fig.add_trace(go.Bar(
-        x=[r[0] for r in rows], y=[r[1] for r in rows],
-        name="Orders", yaxis="y2", marker_color="#EF553B", opacity=0.5,
-    ))
-    fig.update_layout(
-        yaxis={"title": "Revenue ($)"},
-        yaxis2={"title": "Orders", "overlaying": "y", "side": "right"},
-        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02},
-    )
-    n.plotly_chart(fig, filename="monthly_trend.html", caption="Monthly revenue and order trend")
+    fig, ax1 = plt.subplots(figsize=(8, 4))
+    ax1.bar(df["month"], df["orders"], color="#EF553B", alpha=0.5, label="Orders")
+    ax1.set_ylabel("Orders")
+    ax2 = ax1.twinx()
+    ax2.plot(df["month"], df["revenue"], color="#636EFA", marker="o", linewidth=2, label="Revenue")
+    ax2.set_ylabel("Revenue ($)")
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper left")
+    ax1.set_title("Monthly Revenue & Orders")
+    fig.tight_layout()
+    n.figure(fig, "monthly_trend.png", caption="Monthly revenue and order trend")
+    plt.close(fig)
 
 # --- Top 5 Customers ---
 with n.section("Top 5 Customers by Revenue"):
     result = analyst.sql("""
         SELECT c.name, c.segment, SUM(o.amount) AS total_revenue, COUNT(*) AS orders
-        FROM orders o
-        JOIN customers c ON o.customer_id = c.id
+        FROM orders o JOIN customers c ON o.customer_id = c.id
         WHERE o.status = 'completed'
-        GROUP BY 1, 2
-        ORDER BY total_revenue DESC
-        LIMIT 5
+        GROUP BY 1, 2 ORDER BY total_revenue DESC LIMIT 5
     """)
     n.table(result.df(), name="Top Customers")
 
 # --- Regional Performance ---
 with n.section("Regional Performance"):
-    rows = analyst.sql("""
+    df = analyst.sql("""
         SELECT c.region, COUNT(DISTINCT c.id) AS customers,
                COUNT(o.id) AS orders, SUM(o.amount) AS revenue
-        FROM orders o
-        JOIN customers c ON o.customer_id = c.id
+        FROM orders o JOIN customers c ON o.customer_id = c.id
         WHERE o.status = 'completed'
         GROUP BY 1 ORDER BY revenue DESC
-    """).fetchall()
+    """).df()
 
-    fig = px.bar(
-        x=[r[0] for r in rows], y=[r[3] for r in rows],
-        text=[f"{r[2]} orders" for r in rows],
-        labels={"x": "Region", "y": "Revenue ($)"},
-        color_discrete_sequence=["#AB63FA"],
-    )
-    fig.update_traces(textposition="outside")
-    fig.update_layout(showlegend=False)
-    n.plotly_chart(fig, filename="regional_performance.html", caption="Revenue by region")
+    fig, ax = plt.subplots(figsize=(6, 4))
+    bars = ax.bar(df["region"], df["revenue"], color="#AB63FA")
+    ax.bar_label(bars, labels=[f"{o} orders" for o in df["orders"]], padding=3)
+    ax.set_ylabel("Revenue ($)")
+    ax.set_title("Revenue by Region")
+    fig.tight_layout()
+    n.figure(fig, "regional_performance.png", caption="Revenue by region")
+    plt.close(fig)
 
 n.save()
 print("Dashboard saved to dashboard.md")
