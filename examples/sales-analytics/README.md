@@ -10,19 +10,26 @@ A sales analytics dashboard analyzing orders, customers, and products for an e-c
 
 ## What It Demonstrates
 
-- Defining entities with dimensions and measures (semantic layer)
-- Setting up relationships between entities (orders → customers, orders → products)
-- KPI tiles (single-value metrics like total revenue, order count)
-- Grouped tiles (revenue broken down by segment, category, status)
-- Raw SQL tiles for advanced analysis (top customers, monthly trends, regional performance)
-- Global filters
+- Using `Analyst` for SQL queries + `notebookmd` for rendering
+- Interactive Plotly charts: bar charts, pie charts, dual-axis line+bar trend
+- KPI metric cards via `n.metric_row()`
+- Tables via `n.table()` for detailed data (top customers)
+- Plotly charts saved as interactive HTML assets
+
+## Charts
+
+- Revenue by customer segment (bar)
+- Revenue by product category (pie)
+- Order status distribution (color-coded bar)
+- Monthly revenue + order count trend (dual axis)
+- Regional performance (annotated bar)
 
 ## Running
 
 ```bash
 cd examples/sales-analytics
-pip install dashboardmd
+pip install "dashboardmd[plotly]"
 python dashboard.py
 ```
 
-The script generates `dashboard.md` in this directory.
+Generates `dashboard.md` with interactive charts in `assets/`.

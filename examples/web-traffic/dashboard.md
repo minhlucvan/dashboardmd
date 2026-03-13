@@ -1,73 +1,79 @@
 # Web Traffic Dashboard
 
+_Generated: 2026-03-13 04:44:03_
+
+## Artifacts
+
+- [traffic_by_source.html](assets/traffic_by_source.html)
+- [traffic_by_device.html](assets/traffic_by_device.html)
+- [top_pages.html](assets/top_pages.html)
+- [conversion_funnel.html](assets/conversion_funnel.html)
+- [conversions_by_source.html](assets/conversions_by_source.html)
+- [daily_trend.html](assets/daily_trend.html)
+
+
+---
+
 ## Traffic Overview
 
-| views |
-| --- |
-| 30 |
+| **Pageviews** | **Sessions** | **Unique Visitors** | **Avg Duration (s)** |
+| :---: | :---: | :---: | :---: |
+| **30** | **20** | **19** | **93.0** |
 
-| unique_sessions |
-| --- |
-| 20 |
 
-| unique_visitors |
-| --- |
-| 19 |
-
-| avg_duration |
-| --- |
-| 93 |
+---
 
 ## Traffic by Source
 
-| source | views |
-| --- | --- |
-| linkedin | 5 |
-| twitter | 3 |
-| direct | 5 |
-| google | 15 |
-| github | 2 |
+![Pageviews by traffic source](assets/traffic_by_source.html)
+
+*Pageviews by traffic source*
+
+
+---
 
 ## Traffic by Device
 
-| device | views |
-| --- | --- |
-| desktop | 20 |
-| tablet | 2 |
-| mobile | 8 |
+![Device distribution](assets/traffic_by_device.html)
+
+*Device distribution*
+
+
+---
 
 ## Top Pages
 
-| page | views | sessions | avg_duration_sec |
-| --- | --- | --- | --- |
-| / | 9 | 9 | 26.10 |
-| /pricing | 6 | 6 | 105 |
-| /docs | 5 | 5 | 213 |
-| /signup | 4 | 4 | 50 |
-| /blog/tutorial | 3 | 3 | 195 |
-| /blog/intro | 3 | 3 | 25 |
+![Pages ranked by views with average duration](assets/top_pages.html)
+
+*Pages ranked by views with average duration*
+
+
+---
 
 ## Conversion Funnel
 
-| Total Sessions | Viewed Pricing | Viewed Signup | Trial Signups | Purchases |
-| --- | --- | --- | --- | --- |
-| 20 | 6 | 4 | 4 | 2 |
+![Conversion funnel from session to purchase](assets/conversion_funnel.html)
+
+*Conversion funnel from session to purchase*
+
+
+---
 
 ## Conversions by Source
 
-| source | sessions | conversions | conversion_rate_pct | revenue |
-| --- | --- | --- | --- | --- |
-| google | 8 | 5 | 62.50 | 399.95 |
-| linkedin | 3 | 1 | 33.30 | 0 |
-| github | 2 | 0 | 0 | 0 |
-| twitter | 3 | 0 | 0 | 0 |
-| direct | 4 | 0 | 0 | 0 |
+![Sessions vs conversions by source](assets/conversions_by_source.html)
+
+*Sessions vs conversions by source*
+
+
+---
 
 ## Daily Traffic Trend
 
-| date | pageviews | sessions | visitors |
-| --- | --- | --- | --- |
-| 2025-03-01 | 7 | 4 | 4 |
-| 2025-03-02 | 8 | 6 | 6 |
-| 2025-03-03 | 8 | 5 | 5 |
-| 2025-03-04 | 7 | 5 | 5 |
+![Daily traffic trend](assets/daily_trend.html)
+
+*Daily traffic trend*
+
+
+---
+

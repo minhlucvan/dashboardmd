@@ -1,67 +1,86 @@
 # Sales Analytics Dashboard
 
+_Generated: 2026-03-13 04:44:00_
+
+## Artifacts
+
+- [revenue_by_segment.html](assets/revenue_by_segment.html)
+- [revenue_by_category.html](assets/revenue_by_category.html)
+- [order_status.html](assets/order_status.html)
+- [monthly_trend.html](assets/monthly_trend.html)
+- [regional_performance.html](assets/regional_performance.html)
+
+
+---
+
 ## Key Metrics
 
-| revenue |
-| --- |
-| 2,424.58 |
+| **Total Revenue** | **Orders** | **Avg Order Value** | **Units Sold** |
+| :---: | :---: | :---: | :---: |
+| **$2,424.58** | **25** | **$96.98** | **42** |
 
-| order_count |
-| --- |
-| 25 |
 
-| avg_order_value |
-| --- |
-| 96.98 |
+---
 
 ## Revenue by Customer Segment
 
-| segment | revenue |
-| --- | --- |
-| Enterprise | 1,294.79 |
-| SMB | 584.88 |
-| Mid-Market | 544.91 |
+![Revenue by customer segment](assets/revenue_by_segment.html)
+
+*Revenue by customer segment*
+
+
+---
 
 ## Revenue by Product Category
 
-| category | revenue |
-| --- | --- |
-| Accessories | 124.95 |
-| Gadgets | 1,609.86 |
-| Widgets | 689.77 |
+![Revenue share by product category](assets/revenue_by_category.html)
+
+*Revenue share by product category*
+
+
+---
 
 ## Order Status
 
-| status | order_count |
-| --- | --- |
-| cancelled | 2 |
-| completed | 21 |
-| pending | 2 |
+![Order count by status](assets/order_status.html)
 
-## Top 5 Customers by Revenue
+*Order count by status*
 
-| name | segment | total_revenue | orders |
-| --- | --- | --- | --- |
-| Carol Davis | Enterprise | 339.92 | 3 |
-| Frank Lee | Enterprise | 289.97 | 2 |
-| Leo Garcia | Enterprise | 259.98 | 1 |
-| Eva Martinez | SMB | 249.96 | 2 |
-| Bob Smith | SMB | 219.96 | 3 |
+
+---
 
 ## Monthly Revenue Trend
 
-| month | orders | revenue | avg_order |
-| --- | --- | --- | --- |
-| 2025-01 | 5 | 504.91 | 100.98 |
-| 2025-02 | 5 | 569.90 | 113.98 |
-| 2025-03 | 6 | 489.90 | 81.65 |
-| 2025-04 | 5 | 604.91 | 120.98 |
+![Monthly revenue and order trend](assets/monthly_trend.html)
+
+*Monthly revenue and order trend*
+
+
+---
+
+## Top 5 Customers by Revenue
+
+#### Top Customers
+
+| name         | segment    |   total_revenue |   orders |
+|:-------------|:-----------|----------------:|---------:|
+| Carol Davis  | Enterprise |          339.92 |        3 |
+| Frank Lee    | Enterprise |          289.97 |        2 |
+| Leo Garcia   | Enterprise |          259.98 |        1 |
+| Eva Martinez | SMB        |          249.96 |        2 |
+| Bob Smith    | SMB        |          219.96 |        3 |
+
+_shape: 5 rows × 4 cols_
+
+
+---
 
 ## Regional Performance
 
-| region | customers | orders | revenue |
-| --- | --- | --- | --- |
-| East | 3 | 5 | 569.89 |
-| North | 3 | 6 | 554.89 |
-| West | 3 | 5 | 534.91 |
-| South | 2 | 5 | 509.93 |
+![Revenue by region](assets/regional_performance.html)
+
+*Revenue by region*
+
+
+---
+

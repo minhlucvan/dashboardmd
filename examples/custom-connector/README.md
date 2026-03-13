@@ -1,6 +1,6 @@
 # Custom Connector Example
 
-Demonstrates how to build custom `SourceHandler` subclasses to plug any data source into dashboardmd's DuckDB engine.
+Demonstrates how to build custom `SourceHandler` subclasses to plug any data source into dashboardmd's DuckDB engine, with interactive Plotly charts.
 
 ## Custom Connectors
 
@@ -20,11 +20,6 @@ source = APISource(
 )
 ```
 
-Features:
-- Supports custom headers for authentication
-- Supports nested JSON extraction via `json_path`
-- Auto-detects column types via DuckDB
-
 ### GeneratorSource
 
 Creates a DuckDB table from any Python callable that returns a list of dicts.
@@ -37,12 +32,6 @@ def my_data():
 
 source = GeneratorSource(factory=my_data)
 ```
-
-Use cases:
-- Generating synthetic/test data
-- Reading custom file formats
-- Transforming data in Python before loading
-- Connecting to any Python-accessible data source (Redis, S3, internal APIs, etc.)
 
 ## Building Your Own Connector
 
@@ -67,17 +56,21 @@ Then pass it as an entity source:
 entity = Entity("my_table", source=MySource(...), dimensions=[...], measures=[...])
 ```
 
-## Data
+## Charts
 
-- **data/team.json** — generated at runtime, simulating an API response
-- Project and task data are generated in-memory by `GeneratorSource`
+- Budget allocation by team (bar)
+- Task status distribution (pie)
+- Task count by priority with color coding (bar)
+- Actual vs estimated hours by assignee (grouped bar)
+- Project completion rates (color-coded bar + detail table)
+- Total labor cost by team (bar)
 
 ## Running
 
 ```bash
 cd examples/custom-connector
-pip install dashboardmd
+pip install "dashboardmd[plotly]"
 python dashboard.py
 ```
 
-The script generates `dashboard.md` in this directory.
+Generates `dashboard.md` with interactive charts in `assets/`.

@@ -9,17 +9,25 @@ A workforce analytics dashboard covering headcount, compensation, budget utiliza
 
 ## What It Demonstrates
 
-- Using `Analyst.to_md()` for SQL-driven reports (no semantic layer needed)
-- Pure SQL queries with DuckDB features (FILTER, DATEDIFF, CASE expressions)
-- Multiple analysis sections: headcount, budgets, tenure, salary distribution
-- Simple setup — just register CSV files and write SQL
+- Using `Analyst` for SQL queries + `notebookmd` for rendering
+- Interactive Plotly charts: grouped bars, horizontal bars, pie charts
+- KPI metric cards for headcount summary
+- DuckDB features in SQL (FILTER, DATEDIFF, CASE expressions)
+- Tables for detailed data (recent hires)
+
+## Charts
+
+- Headcount by department with avg salary annotations (bar)
+- Budget vs salary spend comparison (grouped bar)
+- Salary distribution by title (horizontal bar)
+- Tenure distribution (pie)
 
 ## Running
 
 ```bash
 cd examples/hr-dashboard
-pip install dashboardmd
+pip install "dashboardmd[plotly]"
 python dashboard.py
 ```
 
-The script generates `dashboard.md` in this directory.
+Generates `dashboard.md` with interactive charts in `assets/`.

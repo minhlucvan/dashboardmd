@@ -1,159 +1,179 @@
 """Web Traffic Dashboard.
 
 Analyzes website pageviews, traffic sources, and conversion funnel.
-Demonstrates combining semantic entities with raw SQL tiles in a Dashboard.
+Uses Analyst for queries and notebookmd with Plotly for rich visualizations.
 """
 
-from dashboardmd import Dashboard, Dimension, Entity, Measure, Relationship
+import plotly.express as px
+import plotly.graph_objects as go
+from notebookmd import nb
+
+from dashboardmd import Analyst
 
 # ---------------------------------------------------------------------------
-# Define entities
+# Set up analyst with data
 # ---------------------------------------------------------------------------
 
-pageviews = Entity(
-    "pageviews",
-    source="data/pageviews.csv",
-    dimensions=[
-        Dimension("id", type="number", primary_key=True),
-        Dimension("timestamp", type="time"),
-        Dimension("page", type="string"),
-        Dimension("source", type="string"),
-        Dimension("device", type="string"),
-        Dimension("session_id", type="string"),
-    ],
-    measures=[
-        Measure("views", type="count"),
-        Measure("unique_sessions", type="count_distinct", sql="session_id"),
-        Measure("unique_visitors", type="count_distinct", sql="user_id"),
-        Measure("avg_duration", type="avg", sql="duration_sec"),
-    ],
-)
-
-conversions = Entity(
-    "conversions",
-    source="data/conversions.csv",
-    dimensions=[
-        Dimension("id", type="number", primary_key=True),
-        Dimension("timestamp", type="time"),
-        Dimension("session_id", type="string"),
-        Dimension("event", type="string"),
-    ],
-    measures=[
-        Measure("conversion_count", type="count"),
-        Measure("total_value", type="sum", sql="value"),
-    ],
-)
-
-relationships = [
-    Relationship("conversions", "pageviews", on=("session_id", "session_id"), type="many_to_one"),
-]
+analyst = Analyst()
+analyst.add("pageviews", "data/pageviews.csv")
+analyst.add("conversions", "data/conversions.csv")
 
 # ---------------------------------------------------------------------------
-# Build dashboard
+# Build report with notebookmd + plotly
 # ---------------------------------------------------------------------------
 
-dash = Dashboard(
-    title="Web Traffic Dashboard",
-    entities=[pageviews, conversions],
-    relationships=relationships,
-    output="dashboard.md",
-)
+n = nb("dashboard.md", title="Web Traffic Dashboard")
 
-# Traffic overview
-dash.section("Traffic Overview")
-dash.tile("pageviews.views")
-dash.tile("pageviews.unique_sessions")
-dash.tile("pageviews.unique_visitors")
-dash.tile("pageviews.avg_duration")
+# --- Traffic Overview ---
+with n.section("Traffic Overview"):
+    kpis = analyst.sql("""
+        SELECT
+            COUNT(*) AS views,
+            COUNT(DISTINCT session_id) AS sessions,
+            COUNT(DISTINCT user_id) AS visitors,
+            ROUND(AVG(duration_sec), 0) AS avg_duration
+        FROM pageviews
+    """).fetchone()
 
-# By source
-dash.section("Traffic by Source")
-dash.tile("pageviews.views", by="pageviews.source", type="bar_chart")
+    n.metric_row([
+        {"label": "Pageviews", "value": kpis[0]},
+        {"label": "Sessions", "value": kpis[1]},
+        {"label": "Unique Visitors", "value": kpis[2]},
+        {"label": "Avg Duration (s)", "value": kpis[3]},
+    ])
 
-# By device
-dash.section("Traffic by Device")
-dash.tile("pageviews.views", by="pageviews.device")
+# --- Traffic by Source ---
+with n.section("Traffic by Source"):
+    rows = analyst.sql("""
+        SELECT source, COUNT(*) AS views FROM pageviews GROUP BY 1 ORDER BY views DESC
+    """).fetchall()
 
-# Top pages
-dash.section("Top Pages")
-dash.tile_sql(
-    "Page Views",
-    """
-    SELECT
-        page,
-        COUNT(*) AS views,
-        COUNT(DISTINCT session_id) AS sessions,
-        ROUND(AVG(duration_sec), 1) AS avg_duration_sec
-    FROM pageviews
-    GROUP BY 1
-    ORDER BY views DESC
-    """,
-)
-
-# Conversion funnel
-dash.section("Conversion Funnel")
-dash.tile_sql(
-    "Funnel",
-    """
-    WITH sessions AS (
-        SELECT COUNT(DISTINCT session_id) AS total_sessions FROM pageviews
-    ),
-    pricing_sessions AS (
-        SELECT COUNT(DISTINCT session_id) AS pricing_views FROM pageviews WHERE page = '/pricing'
-    ),
-    signup_sessions AS (
-        SELECT COUNT(DISTINCT session_id) AS signup_views FROM pageviews WHERE page = '/signup'
-    ),
-    trial_signups AS (
-        SELECT COUNT(*) AS trials FROM conversions WHERE event = 'trial_signup'
-    ),
-    purchases AS (
-        SELECT COUNT(*) AS purchases FROM conversions WHERE event = 'purchase'
+    fig = px.bar(
+        x=[r[0] for r in rows], y=[r[1] for r in rows],
+        labels={"x": "Source", "y": "Pageviews"},
+        color_discrete_sequence=["#636EFA"],
     )
-    SELECT
-        s.total_sessions AS "Total Sessions",
-        p.pricing_views AS "Viewed Pricing",
-        su.signup_views AS "Viewed Signup",
-        t.trials AS "Trial Signups",
-        pu.purchases AS "Purchases"
-    FROM sessions s, pricing_sessions p, signup_sessions su, trial_signups t, purchases pu
-    """,
-)
+    fig.update_layout(showlegend=False)
+    n.plotly_chart(fig, filename="traffic_by_source.html", caption="Pageviews by traffic source")
 
-# Source attribution
-dash.section("Conversions by Source")
-dash.tile_sql(
-    "Source Attribution",
-    """
-    SELECT
-        p.source,
-        COUNT(DISTINCT p.session_id) AS sessions,
-        COUNT(DISTINCT c.id) AS conversions,
-        ROUND(COUNT(DISTINCT c.id) * 100.0 / COUNT(DISTINCT p.session_id), 1) AS conversion_rate_pct,
-        COALESCE(SUM(c.value), 0) AS revenue
-    FROM pageviews p
-    LEFT JOIN conversions c ON p.session_id = c.session_id
-    GROUP BY 1
-    ORDER BY conversions DESC
-    """,
-)
+# --- Traffic by Device ---
+with n.section("Traffic by Device"):
+    rows = analyst.sql("""
+        SELECT device, COUNT(*) AS views FROM pageviews GROUP BY 1 ORDER BY views DESC
+    """).fetchall()
 
-# Daily trend
-dash.section("Daily Traffic Trend")
-dash.tile_sql(
-    "Daily Trend",
-    """
-    SELECT
-        CAST(timestamp AS DATE) AS date,
-        COUNT(*) AS pageviews,
-        COUNT(DISTINCT session_id) AS sessions,
-        COUNT(DISTINCT user_id) AS visitors
-    FROM pageviews
-    GROUP BY 1
-    ORDER BY 1
-    """,
-)
+    fig = px.pie(
+        names=[r[0] for r in rows], values=[r[1] for r in rows],
+        color_discrete_sequence=px.colors.qualitative.Set2,
+    )
+    n.plotly_chart(fig, filename="traffic_by_device.html", caption="Device distribution")
 
-# Generate the dashboard
-dash.save()
-print(f"Dashboard saved to {dash.output}")
+# --- Top Pages ---
+with n.section("Top Pages"):
+    rows = analyst.sql("""
+        SELECT page, COUNT(*) AS views, COUNT(DISTINCT session_id) AS sessions,
+               ROUND(AVG(duration_sec), 1) AS avg_duration_sec
+        FROM pageviews GROUP BY 1 ORDER BY views DESC
+    """).fetchall()
+
+    fig = px.bar(
+        x=[r[1] for r in rows], y=[r[0] for r in rows],
+        orientation="h", text=[f"{r[3]}s avg" for r in rows],
+        labels={"x": "Pageviews", "y": "Page"},
+        color_discrete_sequence=["#AB63FA"],
+    )
+    fig.update_traces(textposition="outside")
+    fig.update_layout(yaxis={"categoryorder": "total ascending"}, showlegend=False)
+    n.plotly_chart(fig, filename="top_pages.html", caption="Pages ranked by views with average duration")
+
+# --- Conversion Funnel ---
+with n.section("Conversion Funnel"):
+    funnel = analyst.sql("""
+        WITH sessions AS (
+            SELECT COUNT(DISTINCT session_id) AS v FROM pageviews
+        ),
+        pricing AS (
+            SELECT COUNT(DISTINCT session_id) AS v FROM pageviews WHERE page = '/pricing'
+        ),
+        signup AS (
+            SELECT COUNT(DISTINCT session_id) AS v FROM pageviews WHERE page = '/signup'
+        ),
+        trials AS (
+            SELECT COUNT(*) AS v FROM conversions WHERE event = 'trial_signup'
+        ),
+        purchases AS (
+            SELECT COUNT(*) AS v FROM conversions WHERE event = 'purchase'
+        )
+        SELECT s.v, p.v, su.v, t.v, pu.v
+        FROM sessions s, pricing p, signup su, trials t, purchases pu
+    """).fetchone()
+
+    stages = ["All Sessions", "Viewed Pricing", "Viewed Signup", "Trial Signup", "Purchase"]
+    values = list(funnel)
+
+    fig = go.Figure(go.Funnel(
+        y=stages, x=values,
+        textinfo="value+percent initial",
+        marker={"color": ["#636EFA", "#EF553B", "#00CC96", "#AB63FA", "#FFA15A"]},
+    ))
+    fig.update_layout(showlegend=False)
+    n.plotly_chart(fig, filename="conversion_funnel.html", caption="Conversion funnel from session to purchase")
+
+# --- Conversions by Source ---
+with n.section("Conversions by Source"):
+    rows = analyst.sql("""
+        SELECT p.source, COUNT(DISTINCT p.session_id) AS sessions,
+               COUNT(DISTINCT c.id) AS conversions,
+               ROUND(COUNT(DISTINCT c.id) * 100.0 / COUNT(DISTINCT p.session_id), 1) AS conv_rate,
+               COALESCE(SUM(c.value), 0) AS revenue
+        FROM pageviews p
+        LEFT JOIN conversions c ON p.session_id = c.session_id
+        GROUP BY 1 ORDER BY conversions DESC
+    """).fetchall()
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=[r[0] for r in rows], y=[r[1] for r in rows],
+        name="Sessions", marker_color="#C8C8C8",
+    ))
+    fig.add_trace(go.Bar(
+        x=[r[0] for r in rows], y=[r[2] for r in rows],
+        name="Conversions", marker_color="#00CC96",
+        text=[f"{r[3]}%" for r in rows], textposition="outside",
+    ))
+    fig.update_layout(
+        barmode="group", yaxis_title="Count",
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02},
+    )
+    n.plotly_chart(fig, filename="conversions_by_source.html", caption="Sessions vs conversions by source")
+
+# --- Daily Traffic Trend ---
+with n.section("Daily Traffic Trend"):
+    rows = analyst.sql("""
+        SELECT CAST(timestamp AS DATE) AS date,
+               COUNT(*) AS pageviews, COUNT(DISTINCT session_id) AS sessions,
+               COUNT(DISTINCT user_id) AS visitors
+        FROM pageviews GROUP BY 1 ORDER BY 1
+    """).fetchall()
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=[str(r[0]) for r in rows], y=[r[1] for r in rows],
+        mode="lines+markers", name="Pageviews", line={"width": 3},
+    ))
+    fig.add_trace(go.Scatter(
+        x=[str(r[0]) for r in rows], y=[r[2] for r in rows],
+        mode="lines+markers", name="Sessions",
+    ))
+    fig.add_trace(go.Scatter(
+        x=[str(r[0]) for r in rows], y=[r[3] for r in rows],
+        mode="lines+markers", name="Visitors",
+    ))
+    fig.update_layout(
+        xaxis_title="Date", yaxis_title="Count",
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02},
+    )
+    n.plotly_chart(fig, filename="daily_trend.html", caption="Daily traffic trend")
+
+n.save()
+print("Dashboard saved to dashboard.md")
