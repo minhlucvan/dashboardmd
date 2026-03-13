@@ -23,21 +23,21 @@ It speaks SQL-like query semantics and connects to the data sources you already 
 **PostgreSQL**, **MySQL**, **MongoDB**, **DuckDB**, **CSV**, and **MindsDB**.
 
 ```
-                                              Databases
-                                              ─────────
-                                              PostgreSQL ────┐
-                                              MySQL      ────┤
-┌────────────────────┐        ┌──────────┐    MongoDB    ────┤
-│  Markdown report   │ ◄───── │dashboard │ ◄──DuckDB     ────┘
-│  (.md + assets/)   │        │    md    │    CSV  ─────────┐
-└────────────────────┘        └──────────┘    MindsDB  ────┘
-                                              ─────────
-                                              Providers
-                                              ─────────
-                                              Metabase  ────┐
-                                              Looker    ────┤
-                                              PowerBI   ────┤
-                                              Cube      ────┘
+Databases
+─────────
+PostgreSQL ────┐
+MySQL      ────┤
+MongoDB    ────┤    ┌──────────┐        ┌────────────────────┐
+DuckDB     ────┘───►│dashboard │ ─────► │  Markdown report   │
+CSV  ─────────┐     │    md    │        │  (.md + assets/)   │
+MindsDB  ────┘     └──────────┘        └────────────────────┘
+─────────
+Providers
+─────────
+Metabase  ────┐
+Looker    ────┤
+PowerBI   ────┤
+Cube      ────┘
 ```
 
 ## Installation
