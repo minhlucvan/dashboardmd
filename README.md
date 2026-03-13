@@ -19,35 +19,30 @@ Every BI platform — Metabase, Looker, PowerBI, Cube — uses the same foundati
 dashboardmd mirrors these concepts exactly in Python. The result is a data model that agents can
 build programmatically, that maps 1:1 to existing BI platforms, and that renders to Markdown.
 
-It speaks SQL-like query semantics and connects to the data sources you already use:
-**PostgreSQL**, **MySQL**, **MongoDB**, **DuckDB**, **CSV**, and **MindsDB**.
+It connects to data sources you already use — **CSV**, **Parquet**, **JSON**, **DuckDB**,
+**PostgreSQL**, **MySQL**, **SQLite**, **pandas DataFrames** — and interops with BI platforms.
 
 ```
-                        DATA SOURCES
-        (all sources provide data to dashboardmd)
-
-     Databases / Files                 BI Providers
+     Data Sources                      BI Platforms
   ┌─────────────────────┐        ┌─────────────────────┐
-  │ PostgreSQL          │        │ Metabase            │
-  │ MySQL               │        │ Looker              │
-  │ MongoDB             │        │ Power BI            │
-  │ DuckDB              │        │ Cube                │
-  │ CSV                 │        │                     │
+  │ CSV / Parquet / JSON │        │ Metabase            │
+  │ PostgreSQL / MySQL  │        │ Looker / LookML     │
+  │ SQLite / DuckDB     │        │ Power BI            │
+  │ pandas DataFrames   │        │ Cube.js             │
   └───────────┬─────────┘        └───────────┬─────────┘
               │                              │
               └──────────────┬───────────────┘
                              ▼
                     ┌─────────────────┐
                     │   dashboardmd   │
-                    │  dashboard DSL  │
-                    │  build logic    │
+                    │    Analyst      │  ← DuckDB engine
+                    │  (core SQL)    │
                     └─────────┬───────┘
                               │
                               ▼
                 ┌──────────────────────────┐
                 │      Markdown Report     │
                 │        (.md files)       │
-                │        + assets/         │
                 └──────────────────────────┘
 ```
 
@@ -67,8 +62,60 @@ pip install "dashboardmd[all]"         # Everything
 
 ## Quick Start
 
+### Direct SQL with Analyst (maximum agent power)
+
+The `Analyst` is the core of dashboardmd — a DuckDB-powered query engine that gives
+AI agents full analytical SQL capabilities over any data source.
+
 ```python
-from dashboardmd import Dashboard, Entity, Dimension, Measure, Relationship
+from dashboardmd import Analyst
+
+# Create an analyst and register data sources
+analyst = Analyst()
+analyst.add("orders", "data/orders.csv")
+analyst.add("customers", "data/customers.csv")
+
+# Full DuckDB SQL — aggregations, window functions, CTEs, JOINs, pivots, regex...
+result = analyst.sql("""
+    SELECT
+        c.segment,
+        COUNT(*) AS order_count,
+        SUM(o.amount) AS revenue,
+        AVG(o.amount) AS avg_order_value
+    FROM orders o
+    JOIN customers c ON o.customer_id = c.id
+    WHERE o.status = 'completed'
+    GROUP BY 1
+    ORDER BY revenue DESC
+""")
+
+# Multiple output formats
+result.show()                  # Print to stdout
+result.to_markdown_table()     # Render as Markdown table
+result.df()                    # Return as pandas DataFrame
+result.fetchall()              # Raw tuples
+result.scalar()                # Single value
+
+# Schema exploration (great for agents)
+analyst.tables()               # List all tables
+analyst.schema("orders")       # Column names and types
+analyst.sample("orders", 5)    # Preview rows
+analyst.count("orders")        # Row count
+
+# Write results to Markdown
+analyst.to_md("output/analysis.md", title="Revenue Analysis", queries=[
+    ("By Segment", "SELECT segment, SUM(amount) FROM orders GROUP BY 1"),
+    ("Top 10", "SELECT * FROM orders ORDER BY amount DESC LIMIT 10"),
+])
+```
+
+### Semantic Queries (BI-style)
+
+Build on top of Analyst with entities, dimensions, and measures — same concepts as
+Looker, PowerBI, Cube, and Metabase.
+
+```python
+from dashboardmd import Analyst, Entity, Dimension, Measure, Relationship
 
 # Define entities (like Looker views, PowerBI tables, Cube cubes)
 orders = Entity("orders", source="data/orders.csv", dimensions=[
@@ -77,19 +124,38 @@ orders = Entity("orders", source="data/orders.csv", dimensions=[
     Dimension("customer_id", type="number"),
     Dimension("status", type="string"),
 ], measures=[
+    Measure("revenue", type="sum", sql="amount"),
+    Measure("count", type="count"),
+])
+
+# Register entities and query semantically
+analyst = Analyst()
+analyst.add_entity(orders)
+result = analyst.query(measures=["orders.revenue"], dimensions=["orders.status"])
+print(result.to_markdown_table())
+```
+
+### Dashboards (structured reports)
+
+```python
+from dashboardmd import Dashboard, Entity, Dimension, Measure, Relationship
+
+orders = Entity("orders", source="data/orders.csv", dimensions=[
+    Dimension("id", type="number", primary_key=True),
+    Dimension("date", type="time"),
+    Dimension("customer_id", type="number"),
+    Dimension("status", type="string"),
+], measures=[
     Measure("revenue", type="sum", sql="amount", format="$,.0f"),
     Measure("count", type="count"),
-    Measure("aov", type="number", sql="revenue / count", format="$,.2f"),
 ])
 
 customers = Entity("customers", source="data/customers.csv", dimensions=[
     Dimension("id", type="number", primary_key=True),
     Dimension("name", type="string"),
     Dimension("segment", type="string"),
-    Dimension("region", type="string"),
 ])
 
-# Define relationships (like Looker joins, PowerBI relationships)
 rels = [
     Relationship("orders", "customers", on=("customer_id", "id"), type="many_to_one"),
 ]
@@ -111,7 +177,15 @@ dash.tile("orders.count", compare="previous_period")
 dash.section("Revenue by Segment")
 dash.tile("orders.revenue", by="customers.segment", type="bar_chart")
 
-dash.save()
+# Raw SQL tiles — full DuckDB power inside dashboards
+dash.section("Custom Analysis")
+dash.tile_sql("Top Customers", """
+    SELECT c.name, SUM(o.amount) AS total
+    FROM orders o JOIN customers c ON o.customer_id = c.id
+    GROUP BY 1 ORDER BY 2 DESC LIMIT 5
+""")
+
+dash.save()  # → output/weekly.md
 ```
 
 ## Concept Mapping
@@ -127,15 +201,33 @@ dash.save()
 
 ## BI Platform Interop
 
-```python
-# Import from Metabase
-from dashboardmd.interop import from_metabase
-dash = from_metabase(url="https://metabase.company.com", api_key="mb_xxx", dashboard_id=42)
-dash.save()  # → Markdown version of the Metabase dashboard
+Convert between dashboardmd and any BI platform's data model:
 
-# Export to Cube schema
-from dashboardmd.interop import to_cube_schema
-to_cube_schema(dash, output_dir="cube/schema/")
+```python
+from dashboardmd.interop import from_metabase, to_metabase
+from dashboardmd.interop import from_lookml, to_lookml
+from dashboardmd.interop import from_cube, to_cube_schema
+from dashboardmd.interop import from_powerbi, to_powerbi
+
+# Import from Metabase metadata export
+entities, relationships = from_metabase(metabase_metadata_dict)
+
+# Export to Cube.js schema
+cube_schema = to_cube_schema(entities, relationships)
+
+# Import from LookML model
+entities, relationships = from_lookml(lookml_model_dict)
+
+# Export to PowerBI tabular model
+powerbi_model = to_powerbi(entities, relationships)
+```
+
+## CLI
+
+```bash
+dashboardmd discover data/          # Auto-discover entities from data files
+dashboardmd query data/ "SELECT COUNT(*) FROM orders"   # Run SQL against data
+dashboardmd run dashboard.py        # Execute a dashboard script
 ```
 
 ## Development

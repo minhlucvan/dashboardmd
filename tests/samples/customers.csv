@@ -1,0 +1,9 @@
+id,name,segment,region,signup_date
+101,Alice Johnson,enterprise,north,2025-06-15
+102,Bob Smith,smb,south,2025-07-20
+103,Carol White,enterprise,east,2025-08-10
+104,Dave Brown,mid_market,west,2025-09-01
+105,Eve Davis,smb,north,2025-10-12
+106,Frank Miller,enterprise,south,2025-11-05
+107,Grace Lee,mid_market,east,2025-12-01
+108,Henry Wilson,smb,west,2026-01-15

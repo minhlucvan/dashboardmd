@@ -37,6 +37,7 @@ classifiers = [
 ]
 dependencies = [
     "notebookmd>=1.0.0",
+    "duckdb>=1.0.0",
 ]
 
 [project.scripts]
@@ -84,6 +85,7 @@ python_functions = "test_*"
 markers = [
     "requires_pandas: Tests that require pandas to be installed",
     "requires_matplotlib: Tests that require matplotlib to be installed",
+    "requires_duckdb: Tests that require duckdb to be installed",
     "slow: Tests that take more than 1 second to run",
     "integration: Integration tests that test multiple components",
 ]
