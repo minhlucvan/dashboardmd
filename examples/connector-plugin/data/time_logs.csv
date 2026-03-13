@@ -1,0 +1,25 @@
+id,task_id,username,date,hours,note
+1,1,alice,2024-01-08,3,Wireframes
+2,1,alice,2024-01-09,2,Hi-fi mockups
+3,1,alice,2024-01-11,1,Final revisions
+4,2,bob,2024-01-09,4,Auth endpoints
+5,2,bob,2024-01-10,6,Token management
+6,2,bob,2024-01-12,4,Bug fixes
+7,2,bob,2024-01-14,6,Integration testing
+8,3,carol,2024-01-11,4,Test setup
+9,3,carol,2024-01-12,3,Auth tests
+10,3,carol,2024-01-13,3,Edge cases
+11,4,bob,2024-01-03,4,Pipeline config
+12,4,bob,2024-01-04,4,Deploy scripts
+13,5,dave,2024-01-15,4,Terraform setup
+14,5,dave,2024-01-16,4,Container config
+15,6,alice,2024-01-16,4,Component design
+16,6,alice,2024-01-17,3,Chart components
+17,6,alice,2024-01-18,3,Layout polish
+18,8,carol,2024-01-04,3,Schema changes
+19,8,carol,2024-01-05,2,Data migration
+20,10,dave,2024-01-17,3,Alert rules
+21,10,dave,2024-01-18,3,Notification setup
+22,12,dave,2024-01-10,3,Test scripts
+23,12,dave,2024-01-11,2,Run load tests
+24,12,dave,2024-01-12,2,Analysis

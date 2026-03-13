@@ -23,13 +23,16 @@ Core concept: Analyst is the foundation. Everything else builds on it.
 __version__ = "0.1.0"
 
 from dashboardmd.analyst import Analyst, QueryResult
+from dashboardmd.connector import Connector, DashboardWidget
 from dashboardmd.dashboard import Dashboard
 from dashboardmd.model import Dimension, Entity, Measure, Relationship
 from dashboardmd.sources import Source
 
 __all__ = [
     "Analyst",
+    "Connector",
     "Dashboard",
+    "DashboardWidget",
     "Dimension",
     "Entity",
     "Measure",
