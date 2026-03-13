@@ -1,4 +1,4 @@
-"""PowerBI connector: import/export PowerBI tabular models.
+"""PowerBI connector: import PowerBI tabular models.
 
 PowerBI Tabular Model maps to dashboardmd as follows:
   - PowerBI Table → Entity
@@ -9,9 +9,6 @@ PowerBI Tabular Model maps to dashboardmd as follows:
 Usage:
     connector = PowerBIConnector(model_dict)
     analyst.use(connector)
-
-    # Export back to PowerBI format
-    powerbi_dict = connector.export()
 """
 
 from __future__ import annotations
@@ -19,7 +16,7 @@ from __future__ import annotations
 from typing import Any
 
 from dashboardmd.connector import Connector
-from dashboardmd.interop.powerbi import from_powerbi, to_powerbi
+from dashboardmd.interop.powerbi import from_powerbi
 from dashboardmd.model import Entity, Relationship
 from dashboardmd.sources.base import SourceHandler
 
@@ -83,7 +80,3 @@ class PowerBIConnector(Connector):
         if self._relationships:
             analyst._relationships.extend(self._relationships)
             analyst._query_builder = None
-
-    def export(self) -> dict[str, Any]:
-        """Export the current model back to PowerBI format."""
-        return to_powerbi(self._entities, self._relationships)

@@ -231,7 +231,7 @@ analyst.query(
 
 ### BI Platform Connectors (built-in)
 
-Import/export data models from any BI platform. They implement the same
+Import data models from any BI platform. They implement the same
 `Connector` interface, so they compose with data connectors:
 
 ```python
@@ -250,13 +250,6 @@ analyst.use(CubeConnector(cube_schema_dict))
 
 # Import from PowerBI
 analyst.use(PowerBIConnector(powerbi_model_dict))
-
-# Export back to any platform
-metabase_connector = MetabaseConnector(metadata)
-metabase_dict = metabase_connector.export()
-
-cube_connector = CubeConnector(schema)
-cube_dict = cube_connector.export()
 ```
 
 ### Custom Connectors

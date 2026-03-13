@@ -1,4 +1,4 @@
-"""Cube.js connector: import/export Cube data models.
+"""Cube.js connector: import Cube data models.
 
 Cube.js schema maps to dashboardmd as follows:
   - Cube → Entity
@@ -9,9 +9,6 @@ Cube.js schema maps to dashboardmd as follows:
 Usage:
     connector = CubeConnector(schema_dict)
     analyst.use(connector)
-
-    # Export back to Cube format
-    cube_dict = connector.export()
 """
 
 from __future__ import annotations
@@ -19,7 +16,7 @@ from __future__ import annotations
 from typing import Any
 
 from dashboardmd.connector import Connector
-from dashboardmd.interop.cube import from_cube, to_cube_schema
+from dashboardmd.interop.cube import from_cube
 from dashboardmd.model import Entity, Relationship
 from dashboardmd.sources.base import SourceHandler
 
@@ -84,7 +81,3 @@ class CubeConnector(Connector):
         if self._relationships:
             analyst._relationships.extend(self._relationships)
             analyst._query_builder = None
-
-    def export(self) -> dict[str, Any]:
-        """Export the current model back to Cube.js format."""
-        return to_cube_schema(self._entities, self._relationships)

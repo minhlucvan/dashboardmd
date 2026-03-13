@@ -1,4 +1,4 @@
-"""LookML/Looker connector: import/export LookML data models.
+"""LookML/Looker connector: import LookML data models.
 
 LookML models map to dashboardmd as follows:
   - LookML view → Entity
@@ -9,9 +9,6 @@ LookML models map to dashboardmd as follows:
 Usage:
     connector = LookMLConnector(model_dict)
     analyst.use(connector)
-
-    # Export back to LookML format
-    lookml_dict = connector.export()
 """
 
 from __future__ import annotations
@@ -19,7 +16,7 @@ from __future__ import annotations
 from typing import Any
 
 from dashboardmd.connector import Connector
-from dashboardmd.interop.lookml import from_lookml, to_lookml
+from dashboardmd.interop.lookml import from_lookml
 from dashboardmd.model import Entity, Relationship
 from dashboardmd.sources.base import SourceHandler
 
@@ -84,7 +81,3 @@ class LookMLConnector(Connector):
         if self._relationships:
             analyst._relationships.extend(self._relationships)
             analyst._query_builder = None
-
-    def export(self) -> dict[str, Any]:
-        """Export the current model back to LookML format."""
-        return to_lookml(self._entities, self._relationships)

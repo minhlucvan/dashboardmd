@@ -1,4 +1,4 @@
-"""Metabase connector: import/export Metabase data models.
+"""Metabase connector: import Metabase data models.
 
 Metabase models map to dashboardmd as follows:
   - Metabase Table → Entity
@@ -9,9 +9,6 @@ Metabase models map to dashboardmd as follows:
 Usage:
     connector = MetabaseConnector(metadata_dict)
     analyst.use(connector)  # registers entities + relationships
-
-    # Export back to Metabase format
-    metabase_dict = connector.export()
 """
 
 from __future__ import annotations
@@ -19,7 +16,7 @@ from __future__ import annotations
 from typing import Any
 
 from dashboardmd.connector import Connector
-from dashboardmd.interop.metabase import from_metabase, to_metabase
+from dashboardmd.interop.metabase import from_metabase
 from dashboardmd.model import Entity, Relationship
 from dashboardmd.sources.base import SourceHandler
 
@@ -96,7 +93,3 @@ class MetabaseConnector(Connector):
         if self._relationships:
             analyst._relationships.extend(self._relationships)
             analyst._query_builder = None
-
-    def export(self) -> dict[str, Any]:
-        """Export the current model back to Metabase format."""
-        return to_metabase(self._entities, self._relationships)
