@@ -23,21 +23,21 @@ It speaks SQL-like query semantics and connects to the data sources you already 
 **PostgreSQL**, **MySQL**, **MongoDB**, **DuckDB**, **CSV**, and **MindsDB**.
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                                                                     │
-│   PostgreSQL ──────┐                                                │
-│   MySQL      ──────┤                                                │
-│   MongoDB    ──────┤           ┌───────────────────┐                │
-│   DuckDB     ──────┼───►      │   dashboardmd     │   ◄──── Metabase
-│   CSV        ──────┤          │  SQL-like query   │   ◄──── Looker
-│   MindsDB    ──────┘          │    Python API     │   ◄──── PowerBI
-│                               └────────┬──────────┘   ◄──── Cube
-│                                        │                            │
-│                                        ▼                            │
-│                                  Markdown report                    │
-│                                  (.md + assets/)                    │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+                                              Databases
+                                              ─────────
+                                              PostgreSQL ────┐
+                                              MySQL      ────┤
+┌────────────────────┐        ┌──────────┐    MongoDB    ────┤
+│  Markdown report   │ ◄───── │dashboard │ ◄──DuckDB     ────┘
+│  (.md + assets/)   │        │    md    │    CSV  ─────────┐
+└────────────────────┘        └──────────┘    MindsDB  ────┘
+                                              ─────────
+                                              Providers
+                                              ─────────
+                                              Metabase  ────┐
+                                              Looker    ────┤
+                                              PowerBI   ────┤
+                                              Cube      ────┘
 ```
 
 ## Installation
