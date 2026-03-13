@@ -378,3 +378,92 @@ class TestDashboardSave:
         content = output_path.read_text()
         # The count should be 20 (from our sample data)
         assert "20" in content
+
+    def test_save_with_raw_sql_tile(
+        self, tmp_output_dir: Path, orders_csv: Path
+    ) -> None:
+        """Raw SQL tiles bypass the semantic layer and render directly."""
+        from dashboardmd.dashboard import Dashboard
+        from dashboardmd.model import Dimension, Entity, Measure
+
+        orders = Entity(
+            name="orders",
+            source=orders_csv,
+            dimensions=[Dimension("id", type="number", primary_key=True)],
+            measures=[Measure("count", type="count")],
+        )
+        output_path = tmp_output_dir / "raw_sql.md"
+        dash = Dashboard(
+            title="Raw SQL Test",
+            entities=[orders],
+            output=str(output_path),
+        )
+        dash.section("Custom Query")
+        dash.tile_sql("Status Counts", "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY 1")
+        dash.save()
+
+        content = output_path.read_text()
+        assert "Custom Query" in content
+        # Should contain status values from the CSV
+        assert "cnt" in content or "status" in content
+
+
+# ---------------------------------------------------------------------------
+# Analyst Integration
+# ---------------------------------------------------------------------------
+
+
+class TestDashboardAnalystIntegration:
+    """Dashboard delegates all query execution to the underlying Analyst."""
+
+    def test_dashboard_exposes_analyst(self) -> None:
+        """Dashboard provides access to its underlying Analyst."""
+        from dashboardmd.dashboard import Dashboard
+
+        dash = Dashboard(title="Test", output="output/test.md")
+        assert dash.analyst is not None
+
+    def test_dashboard_with_custom_analyst(self, orders_csv: Path) -> None:
+        """Dashboard can use a pre-configured Analyst."""
+        from dashboardmd.analyst import Analyst
+        from dashboardmd.dashboard import Dashboard
+
+        analyst = Analyst()
+        analyst.add("orders", str(orders_csv))
+
+        dash = Dashboard(title="Test", output="output/test.md", analyst=analyst)
+        assert dash.analyst is analyst
+        assert "orders" in dash.analyst.tables()
+
+    def test_dashboard_query_delegates_to_analyst(self, orders_csv: Path) -> None:
+        """Dashboard.query() delegates to the underlying Analyst.query()."""
+        from dashboardmd.dashboard import Dashboard
+        from dashboardmd.model import Dimension, Entity, Measure
+
+        orders = Entity(
+            name="orders",
+            source=orders_csv,
+            dimensions=[
+                Dimension("id", type="number", primary_key=True),
+                Dimension("status", type="string"),
+            ],
+            measures=[Measure("count", type="count")],
+        )
+        dash = Dashboard(title="Test", entities=[orders], output="output/test.md")
+        result = dash.query(measures=["orders.count"], dimensions=["orders.status"])
+        assert result.row_count > 0
+
+    def test_dashboard_execute_sql(self, orders_csv: Path) -> None:
+        """Dashboard.execute_sql() delegates to Analyst.sql()."""
+        from dashboardmd.dashboard import Dashboard
+        from dashboardmd.model import Dimension, Entity, Measure
+
+        orders = Entity(
+            name="orders",
+            source=orders_csv,
+            dimensions=[Dimension("id", type="number", primary_key=True)],
+            measures=[Measure("count", type="count")],
+        )
+        dash = Dashboard(title="Test", entities=[orders], output="output/test.md")
+        result = dash.execute_sql("SELECT COUNT(*) FROM orders")
+        assert result.scalar() == 20

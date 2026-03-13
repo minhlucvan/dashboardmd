@@ -1,20 +1,24 @@
-"""Execution engine: run queries against data sources via DuckDB."""
+"""Execution engine: backward-compatible wrapper around Analyst.
+
+Engine exists for backward compatibility. Internally it delegates
+everything to Analyst, which is the real query engine.
+
+Prefer using Analyst directly for new code.
+"""
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
-import duckdb
-
+from dashboardmd.analyst import Analyst, QueryResult
 from dashboardmd.model import Entity
-from dashboardmd.sources.base import SourceHandler
 
 
 class Engine:
     """DuckDB-based execution engine.
 
-    Registers source handlers as DuckDB views and executes queries.
+    Thin wrapper around Analyst that accepts entities and relationships
+    at construction time. For new code, use Analyst directly.
     """
 
     def __init__(
@@ -23,74 +27,42 @@ class Engine:
         relationships: list[Any] | None = None,
         db_path: str | None = None,
     ) -> None:
-        self.conn: duckdb.DuckDBPyConnection = duckdb.connect(db_path or ":memory:")
-        self.entities: dict[str, Entity] = {}
-        self.relationships = relationships or []
+        self._analyst = Analyst(db_path=db_path)
+
+        if relationships:
+            self._analyst.set_relationships(relationships)
 
         for entity in entities or []:
-            self._register_entity(entity)
+            self._analyst.add_entity(entity)
 
-    def _register_entity(self, entity: Entity) -> None:
-        """Register an entity's source in DuckDB."""
-        source = entity.source
-        if source is None:
-            return
+    @property
+    def conn(self) -> Any:
+        """Underlying DuckDB connection."""
+        return self._analyst.conn
 
-        if isinstance(source, SourceHandler):
-            source.register(self.conn, entity.name)
-        elif isinstance(source, (str, Path)):
-            # Convenience: treat string paths as CSV
-            path = str(source)
-            if path.endswith(".parquet"):
-                self.conn.execute(f"CREATE OR REPLACE VIEW \"{entity.name}\" AS SELECT * FROM read_parquet('{path}')")
-            elif path.endswith(".json"):
-                self.conn.execute(
-                    f"CREATE OR REPLACE VIEW \"{entity.name}\" AS SELECT * FROM read_json_auto('{path}')"
-                )
-            else:
-                self.conn.execute(
-                    f"CREATE OR REPLACE VIEW \"{entity.name}\" AS SELECT * FROM read_csv_auto('{path}')"
-                )
-        self.entities[entity.name] = entity
-
-    def execute(self, query: Any) -> duckdb.DuckDBPyRelation:
+    def execute(self, query: Any) -> Any:
         """Execute a Query object and return results."""
-        # For now, delegate to sql() with built SQL
         from dashboardmd.query import QueryBuilder
 
         builder = QueryBuilder(
-            entities=list(self.entities.values()),
-            relationships=self.relationships,
+            entities=list(self._analyst.entities.values()),
+            relationships=self._analyst.relationships,
         )
         sql = builder.build_sql(query)
-        return self.conn.execute(sql)
+        return self._analyst.conn.execute(sql)
 
-    def sql(self, query: str) -> duckdb.DuckDBPyRelation:
-        """Execute raw SQL directly against DuckDB."""
-        return self.conn.execute(query)
-
-    def register_source(self, name: str, source: SourceHandler) -> None:
-        """Register a standalone source (no Entity wrapper)."""
-        source.register(self.conn, name)
-
-    def register_csv(self, name: str, path: str) -> None:
-        """Convenience: register a CSV file."""
-        self.conn.execute(f"CREATE OR REPLACE VIEW \"{name}\" AS SELECT * FROM read_csv_auto('{path}')")
-
-    def register_parquet(self, name: str, path: str) -> None:
-        """Convenience: register a Parquet file."""
-        self.conn.execute(f"CREATE OR REPLACE VIEW \"{name}\" AS SELECT * FROM read_parquet('{path}')")
+    def sql(self, query: str) -> QueryResult:
+        """Execute raw SQL via Analyst."""
+        return self._analyst.sql(query)
 
     def tables(self) -> list[str]:
         """List all registered tables/views."""
-        result = self.conn.execute("SELECT table_name FROM information_schema.tables").fetchall()
-        return [row[0] for row in result]
+        return self._analyst.tables()
 
     def schema(self, table_name: str) -> list[tuple[str, str]]:
         """Get column names and types for a table."""
-        result = self.conn.execute(f"DESCRIBE \"{table_name}\"").fetchall()
-        return [(row[0], row[1]) for row in result]
+        return self._analyst.schema(table_name)
 
     def close(self) -> None:
         """Close the DuckDB connection."""
-        self.conn.close()
+        self._analyst.close()

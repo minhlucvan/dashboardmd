@@ -479,6 +479,202 @@ class TestAnalystMarkdown:
 # ---------------------------------------------------------------------------
 
 
+class TestAnalystSemanticQuery:
+    """Analyst.query() executes semantic queries (measures + dimensions → SQL)."""
+
+    def test_entity_registration(self, orders_csv: Path) -> None:
+        """add_entity() registers an Entity and its source."""
+        from dashboardmd import Analyst, Dimension, Entity, Measure
+
+        orders = Entity(
+            name="orders",
+            source=str(orders_csv),
+            dimensions=[Dimension("id", type="number", primary_key=True)],
+            measures=[Measure("count", type="count")],
+        )
+        with Analyst() as a:
+            a.add_entity(orders)
+            assert "orders" in a.tables()
+            assert "orders" in a.entities
+
+    def test_multiple_entity_registration(
+        self, orders_csv: Path, customers_csv: Path
+    ) -> None:
+        """add_entities() registers multiple entities."""
+        from dashboardmd import Analyst, Dimension, Entity
+
+        entities = [
+            Entity("orders", source=str(orders_csv), dimensions=[Dimension("id", type="number", primary_key=True)]),
+            Entity("customers", source=str(customers_csv), dimensions=[Dimension("id", type="number", primary_key=True)]),
+        ]
+        with Analyst() as a:
+            a.add_entities(entities)
+            assert len(a.entities) == 2
+
+    def test_semantic_query_single_measure(self, orders_csv: Path) -> None:
+        """query(measures=...) executes a semantic query."""
+        from dashboardmd import Analyst, Dimension, Entity, Measure
+
+        orders = Entity(
+            name="orders",
+            source=str(orders_csv),
+            dimensions=[Dimension("id", type="number", primary_key=True)],
+            measures=[Measure("count", type="count")],
+        )
+        with Analyst() as a:
+            a.add_entity(orders)
+            result = a.query(measures=["orders.count"])
+            assert result.scalar() == 20
+
+    def test_semantic_query_with_dimension(self, orders_csv: Path) -> None:
+        """query(measures=..., dimensions=...) groups results."""
+        from dashboardmd import Analyst, Dimension, Entity, Measure
+
+        orders = Entity(
+            name="orders",
+            source=str(orders_csv),
+            dimensions=[
+                Dimension("id", type="number", primary_key=True),
+                Dimension("status", type="string"),
+            ],
+            measures=[Measure("revenue", type="sum", sql="amount")],
+        )
+        with Analyst() as a:
+            a.add_entity(orders)
+            result = a.query(
+                measures=["orders.revenue"],
+                dimensions=["orders.status"],
+            )
+            assert result.row_count == 3  # completed, pending, cancelled
+
+    def test_semantic_query_string_shorthand(self, orders_csv: Path) -> None:
+        """query() accepts single strings instead of lists."""
+        from dashboardmd import Analyst, Dimension, Entity, Measure
+
+        orders = Entity(
+            name="orders",
+            source=str(orders_csv),
+            dimensions=[
+                Dimension("id", type="number", primary_key=True),
+                Dimension("status", type="string"),
+            ],
+            measures=[Measure("count", type="count")],
+        )
+        with Analyst() as a:
+            a.add_entity(orders)
+            result = a.query(measures="orders.count", dimensions="orders.status")
+            assert result.row_count == 3
+
+    def test_semantic_query_with_filter(self, orders_csv: Path) -> None:
+        """query() supports filters."""
+        from dashboardmd import Analyst, Dimension, Entity, Measure
+
+        orders = Entity(
+            name="orders",
+            source=str(orders_csv),
+            dimensions=[
+                Dimension("id", type="number", primary_key=True),
+                Dimension("status", type="string"),
+            ],
+            measures=[Measure("count", type="count")],
+        )
+        with Analyst() as a:
+            a.add_entity(orders)
+            result = a.query(
+                measures=["orders.count"],
+                filters=[("orders.status", "equals", "completed")],
+            )
+            count = result.scalar()
+            assert count < 20  # Fewer than all orders
+
+    def test_semantic_cross_entity_join(
+        self, orders_csv: Path, customers_csv: Path
+    ) -> None:
+        """query() auto-resolves joins between entities."""
+        from dashboardmd import Analyst, Dimension, Entity, Measure, Relationship
+
+        orders = Entity(
+            name="orders",
+            source=str(orders_csv),
+            dimensions=[
+                Dimension("id", type="number", primary_key=True),
+                Dimension("customer_id", type="number"),
+            ],
+            measures=[Measure("revenue", type="sum", sql="amount")],
+        )
+        customers = Entity(
+            name="customers",
+            source=str(customers_csv),
+            dimensions=[
+                Dimension("id", type="number", primary_key=True),
+                Dimension("segment", type="string"),
+            ],
+        )
+        rels = [
+            Relationship("orders", "customers", on=("customer_id", "id"), type="many_to_one"),
+        ]
+        with Analyst() as a:
+            a.add_entities([orders, customers])
+            a.set_relationships(rels)
+            result = a.query(
+                measures=["orders.revenue"],
+                dimensions=["customers.segment"],
+            )
+            assert result.row_count == 3  # enterprise, smb, mid_market
+
+    def test_sql_and_semantic_on_same_analyst(
+        self, orders_csv: Path, customers_csv: Path
+    ) -> None:
+        """Both sql() and query() work on the same Analyst instance."""
+        from dashboardmd import Analyst, Dimension, Entity, Measure, Relationship
+
+        orders = Entity(
+            name="orders",
+            source=str(orders_csv),
+            dimensions=[
+                Dimension("id", type="number", primary_key=True),
+                Dimension("customer_id", type="number"),
+                Dimension("status", type="string"),
+            ],
+            measures=[Measure("revenue", type="sum", sql="amount")],
+        )
+        customers = Entity(
+            name="customers",
+            source=str(customers_csv),
+            dimensions=[
+                Dimension("id", type="number", primary_key=True),
+                Dimension("segment", type="string"),
+            ],
+        )
+        rels = [
+            Relationship("orders", "customers", on=("customer_id", "id"), type="many_to_one"),
+        ]
+        with Analyst() as a:
+            a.add_entities([orders, customers]).set_relationships(rels)
+
+            # Semantic query
+            semantic = a.query(measures="orders.revenue", dimensions="customers.segment")
+            assert semantic.row_count == 3
+
+            # Raw SQL on the same data
+            raw = a.sql(
+                "SELECT c.segment, SUM(o.amount) "
+                "FROM orders o JOIN customers c ON o.customer_id = c.id "
+                "GROUP BY 1"
+            )
+            assert raw.row_count == 3
+
+            # Both should give the same totals
+            semantic_total = sum(r[1] for r in semantic.fetchall())
+            raw_total = sum(r[1] for r in raw.fetchall())
+            assert semantic_total == pytest.approx(raw_total)
+
+
+# ---------------------------------------------------------------------------
+# Context Manager
+# ---------------------------------------------------------------------------
+
+
 class TestAnalystContextManager:
     """Analyst supports with-statement usage."""
 
