@@ -9,6 +9,7 @@ Each example is a self-contained project with its own data, Python script, gener
 | [sales-analytics](sales-analytics/) | E-commerce dashboard with orders, customers, and products | `Dashboard` with semantic entities + raw SQL tiles |
 | [hr-dashboard](hr-dashboard/) | Workforce analytics — headcount, compensation, budget utilization | `Analyst.to_md()` with pure SQL queries |
 | [web-traffic](web-traffic/) | Website traffic, conversion funnel, and source attribution | `Dashboard` mixing semantic tiles and SQL tiles |
+| [custom-connector](custom-connector/) | Custom `SourceHandler` subclasses — API and generator connectors | Custom connectors + `Dashboard` |
 
 ## Structure
 
@@ -36,6 +37,10 @@ python dashboard.py
 # → generates dashboard.md
 
 cd ../web-traffic
+python dashboard.py
+# → generates dashboard.md
+
+cd ../custom-connector
 python dashboard.py
 # → generates dashboard.md
 ```
